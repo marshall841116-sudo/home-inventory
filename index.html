@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>居家備品庫存管家</title>
 
-  <!-- iOS 主畫面 PWA 與圖示 Meta 設定 -->
+  <!-- iOS 主畫面 PWA 與動態圖示 Meta -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" id="ios-app-title" content="備品庫存" />
@@ -45,15 +45,14 @@
       color: #f4f4f5;
       -webkit-tap-highlight-color: transparent;
       padding-top: var(--sat);
-      padding-bottom: calc(6rem + var(--sab));
+      padding-bottom: calc(6.5rem + var(--sab));
     }
 
-    /* 防止 iOS 聚焦輸入框時自動放大畫面 */
+    /* 防止 iOS 輸入框自動放大 */
     input, select, textarea {
       font-size: 16px !important;
     }
 
-    /* 隱藏捲軸但保留橫向或縱向滑動 */
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
@@ -63,18 +62,34 @@
     }
 
     @keyframes modalIn {
-      from {
-        opacity: 0;
-        transform: translateY(14px) scale(0.98);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
+      from { opacity: 0; transform: translateY(14px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
-
     .animate-modal {
       animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* 排序模式微幅晃動與拖曳狀態 */
+    @keyframes sortWiggle {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-0.65deg); }
+      75% { transform: rotate(0.65deg); }
+    }
+    .is-sorting-card {
+      animation: sortWiggle 0.45s ease-in-out infinite;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .is-dragging-source {
+      opacity: 0.32 !important;
+      transform: scale(0.95) !important;
+      animation: none !important;
+    }
+    .drag-over-target {
+      border-color: #6366f1 !important;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.6) !important;
+      transform: scale(1.03) !important;
     }
 
     button {
@@ -84,33 +99,41 @@
 </head>
 <body class="min-h-screen antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
 
-  <!-- 頂部固定導覽列 -->
+  <!-- ==================== 頂部導覽列 ==================== -->
   <header class="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/90">
-    <div class="max-w-5xl mx-auto px-3.5 sm:px-6 min-h-[4rem] py-2 flex items-center justify-between gap-2">
-      <!-- 品牌標題區 -->
-      <div class="flex items-center gap-2.5 min-w-0">
-        <div id="header-icon-preview" class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 text-lg font-bold">
+    <div class="max-w-5xl mx-auto px-3 sm:px-6 min-h-[4rem] py-2 flex items-center justify-between gap-2">
+      <!-- 品牌與標題 -->
+      <div class="flex items-center gap-2 min-w-0">
+        <div id="header-icon-preview" class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 text-lg font-bold overflow-hidden">
           📦
         </div>
         <div class="min-w-0">
           <h1 id="header-title-text" class="text-sm sm:text-lg font-bold tracking-tight text-zinc-100 truncate">居家備品庫存</h1>
-          <p class="text-[11px] text-zinc-400 truncate hidden xs:block sm:block">數量追蹤・存放位置管理</p>
+          <p class="hidden sm:block text-[11px] text-zinc-400 truncate">分類自訂・位置追蹤・格子排序</p>
         </div>
       </div>
 
-      <!-- 右側功能按鈕群：位置管理永遠清楚顯示 -->
-      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        <button type="button" onclick="openLocationModal(false)" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">
-          <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+      <!-- 右側功能按鈕群：分類管理、位置管理、iOS圖示/備份 -->
+      <div class="flex items-center gap-1.5 shrink-0">
+        <!-- 分類管理按鈕 -->
+        <button type="button" onclick="openCategoryModal(false)" class="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 active:scale-95 text-amber-300 border border-amber-500/35 text-xs font-semibold transition">
+          <i data-lucide="tags" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+          <span>分類管理</span>
+        </button>
+
+        <!-- 位置管理按鈕 -->
+        <button type="button" onclick="openLocationModal(false)" class="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/35 text-xs font-semibold transition">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400 shrink-0"></i>
           <span>位置管理</span>
         </button>
 
-        <button type="button" onclick="openSettingsModal()" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-200 border border-zinc-800 text-xs font-medium transition">
-          <i data-lucide="smartphone" class="w-4 h-4 text-indigo-400 shrink-0"></i>
-          <span class="hidden sm:inline">iOS圖示 / 備份</span>
-          <span class="sm:hidden">圖示/備份</span>
+        <!-- iOS 圖示 / 備份設定 -->
+        <button type="button" onclick="openSettingsModal()" class="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-200 border border-zinc-800 text-xs font-medium transition" title="iOS主畫面圖示與資料備份">
+          <i data-lucide="smartphone" class="w-3.5 h-3.5 text-indigo-400 shrink-0"></i>
+          <span class="hidden md:inline">iOS圖示 / 備份</span>
         </button>
 
+        <!-- 桌機新增備品按鈕 -->
         <button type="button" onclick="openItemModal()" class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold shadow-lg shadow-indigo-600/25 transition">
           <i data-lucide="plus" class="w-4 h-4"></i>
           <span>新增備品</span>
@@ -119,12 +142,12 @@
     </div>
   </header>
 
-  <!-- 主內容區 -->
-  <main class="max-w-5xl mx-auto px-3.5 sm:px-6 pt-5 space-y-5">
+  <!-- ==================== 主內容區 ==================== -->
+  <main class="max-w-5xl mx-auto px-3.5 sm:px-6 pt-4 space-y-4">
 
     <!-- 1. 三格統計儀表板 -->
     <section class="grid grid-cols-3 gap-2.5 sm:gap-4">
-      <button type="button" onclick="setStockFilter('all')" id="stat-all" class="stat-card text-left p-3.5 sm:p-4 rounded-2xl bg-zinc-900/90 border border-indigo-500/60 ring-1 ring-indigo-500/30 transition active:scale-[0.98]">
+      <button type="button" onclick="setStockFilter('all')" id="stat-all" class="stat-card text-left p-3 sm:p-4 rounded-2xl bg-zinc-900/90 border border-indigo-500/60 ring-1 ring-indigo-500/30 transition active:scale-[0.98]">
         <div class="flex items-center justify-between text-zinc-400 text-xs mb-1">
           <span>全部品項</span>
           <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-400"></i>
@@ -132,7 +155,7 @@
         <div class="text-xl sm:text-2xl font-bold text-zinc-100" id="count-total">0</div>
       </button>
 
-      <button type="button" onclick="setStockFilter('low')" id="stat-low" class="stat-card text-left p-3.5 sm:p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/90 hover:border-zinc-700 transition active:scale-[0.98]">
+      <button type="button" onclick="setStockFilter('low')" id="stat-low" class="stat-card text-left p-3 sm:p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/90 hover:border-zinc-700 transition active:scale-[0.98]">
         <div class="flex items-center justify-between text-zinc-400 text-xs mb-1">
           <span>低庫存</span>
           <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -140,7 +163,7 @@
         <div class="text-xl sm:text-2xl font-bold text-amber-400" id="count-low">0</div>
       </button>
 
-      <button type="button" onclick="setStockFilter('out')" id="stat-out" class="stat-card text-left p-3.5 sm:p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/90 hover:border-zinc-700 transition active:scale-[0.98]">
+      <button type="button" onclick="setStockFilter('out')" id="stat-out" class="stat-card text-left p-3 sm:p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/90 hover:border-zinc-700 transition active:scale-[0.98]">
         <div class="flex items-center justify-between text-zinc-400 text-xs mb-1">
           <span>已缺貨</span>
           <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-400"></i>
@@ -149,12 +172,12 @@
       </button>
     </section>
 
-    <!-- 2. 搜尋、位置篩選與分類膠囊 -->
-    <section class="space-y-3">
-      <div class="flex flex-col sm:flex-row gap-2.5">
+    <!-- 2. 搜尋與存放位置篩選列 -->
+    <section class="space-y-2.5">
+      <div class="flex flex-col sm:flex-row gap-2">
         <div class="relative flex-1">
           <i data-lucide="search" class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-          <input type="text" id="search-input" oninput="renderInventory()" placeholder="搜尋備品名稱、存放位置或備註..." class="w-full pl-10 pr-9 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition" />
+          <input type="text" id="search-input" oninput="renderInventory()" placeholder="搜尋備品名稱、分類、位置或備註..." class="w-full pl-10 pr-9 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition" />
           <button type="button" id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300" aria-label="清除搜尋">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
@@ -169,25 +192,65 @@
             <i data-lucide="chevron-down" class="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
           </div>
 
-          <button type="button" onclick="openLocationModal(false)" class="px-3 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-emerald-400 flex items-center gap-1.5 text-xs font-medium shrink-0 transition" title="管理存放位置">
+          <button type="button" onclick="openLocationModal(false)" class="px-3 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-emerald-400 flex items-center justify-center shrink-0 transition" title="管理存放位置">
             <i data-lucide="folder-cog" class="w-4 h-4"></i>
-            <span class="sm:hidden">管理位置</span>
           </button>
         </div>
       </div>
 
-      <!-- 7 大分類膠囊 -->
-      <div id="category-pills" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+      <!-- 自訂分類膠囊列（尾端附帶管理/新增分類快捷鍵） -->
+      <div id="category-pills" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-0.5">
         <!-- 由 JS 動態產生 -->
       </div>
     </section>
 
-    <!-- 3. 備品卡片網格 -->
-    <section id="inventory-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+    <!-- 3. 檢視模式切換 & 編輯排序工具列 -->
+    <section class="flex items-center justify-between gap-2 pt-1">
+      <div class="flex items-center gap-2">
+        <span id="visible-items-count" class="text-sm font-semibold text-zinc-300">0 件物品</span>
+        <span id="sort-hint-badge" class="hidden px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[11px] font-medium">
+          拖曳或點箭頭調順序
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- 雙模式切換膠囊：格子檢視 vs 清單檢視 -->
+        <div class="inline-flex items-center p-1 rounded-full bg-zinc-900 border border-zinc-800">
+          <button type="button" id="view-grid-btn" onclick="setViewMode('grid')" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-600 text-white shadow transition" title="3欄格子檢視">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+            <span>格子</span>
+          </button>
+          <button type="button" id="view-list-btn" onclick="setViewMode('list')" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition" title="清單檢視">
+            <i data-lucide="list" class="w-3.5 h-3.5"></i>
+            <span>清單</span>
+          </button>
+        </div>
+
+        <!-- 編輯排序 / 完成排序按鈕 -->
+        <button type="button" id="toggle-sort-btn" onclick="toggleSortMode()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-200 border border-zinc-700/80 text-xs font-semibold shadow-sm transition">
+          <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span id="toggle-sort-label">編輯排序</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 排序模式說明橫幅 -->
+    <div id="sort-mode-banner" class="hidden p-3 rounded-2xl bg-indigo-950/50 border border-indigo-500/40 flex items-center justify-between gap-2 text-xs text-indigo-200">
+      <div class="flex items-center gap-2">
+        <i data-lucide="hand" class="w-4 h-4 text-indigo-400 shrink-0"></i>
+        <span>排序模式中：手指按住卡片拖曳換位，或點擊卡片上的 <b>← / →</b> 調整順序</span>
+      </div>
+      <button type="button" onclick="toggleSortMode()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold shrink-0 transition">
+        完成排序
+      </button>
+    </div>
+
+    <!-- 4. 備品顯示容器（格子檢視 3欄 / 清單檢視） -->
+    <section id="inventory-container" class="grid grid-cols-3 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
       <!-- 由 JS 動態產生 -->
     </section>
 
-    <!-- 空狀態畫面 -->
+    <!-- 空狀態提示 -->
     <section id="empty-state" class="hidden py-16 px-4 text-center space-y-3 bg-zinc-900/40 rounded-3xl border border-dashed border-zinc-800">
       <div class="w-12 h-12 rounded-2xl bg-zinc-800/80 text-zinc-400 flex items-center justify-center mx-auto">
         <i data-lucide="package-open" class="w-6 h-6"></i>
@@ -220,23 +283,49 @@
       <form id="item-form" onsubmit="saveItem(event)" class="space-y-4">
         <input type="hidden" id="item-id" />
 
+        <!-- 備品專屬圖示或照片設定 -->
+        <div class="p-3 rounded-2xl bg-zinc-950 border border-zinc-800/90 flex items-center gap-3.5">
+          <div id="item-visual-preview" class="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-3xl shrink-0 overflow-hidden">
+            📦
+          </div>
+          <div class="flex-1 min-w-0 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-zinc-400">格子圖示 / 物品照片</span>
+              <button type="button" id="clear-item-photo-btn" onclick="clearItemPhoto()" class="hidden text-[11px] text-rose-400 hover:text-rose-300">
+                移除照片
+              </button>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="text" id="item-emoji" maxlength="2" oninput="updateItemVisualPreview()" placeholder="📦" class="w-12 text-center py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-base focus:outline-none focus:border-indigo-500" title="輸入 Emoji" />
+              <label class="flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-xs text-zinc-200 cursor-pointer transition">
+                <i data-lucide="camera" class="w-3.5 h-3.5 text-indigo-400"></i>
+                <span>上傳物品照片</span>
+                <input type="file" id="item-photo-input" accept="image/*" onchange="handleItemPhotoUpload(event)" class="hidden" />
+              </label>
+            </div>
+          </div>
+        </div>
+
         <div>
           <label class="block text-xs font-medium text-zinc-400 mb-1.5">備品名稱 <span class="text-rose-400">*</span></label>
-          <input type="text" id="item-name" required placeholder="例如：抽取式衛生紙、3號電池、垃圾袋" class="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:outline-none focus:border-indigo-500" />
+          <input type="text" id="item-name" required placeholder="例如：牙刷、抽取式衛生紙、3號電池" class="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:outline-none focus:border-indigo-500" />
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-medium text-zinc-400 mb-1.5">分類</label>
-            <select id="item-category" class="w-full px-3 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:outline-none focus:border-indigo-500">
-              <option value="日用衛生">🧻 日用衛生</option>
-              <option value="清潔洗劑">🧴 清潔洗劑</option>
-              <option value="廚房耗材">🍽️ 廚房耗材</option>
-              <option value="3C電池">🔋 3C電池</option>
-              <option value="常備醫藥">🩹 常備醫藥</option>
-              <option value="食品飲水">🥫 食品飲水</option>
-              <option value="其他備品">📦 其他備品</option>
-            </select>
+            <div class="flex items-center justify-between mb-1.5">
+              <label class="block text-xs font-medium text-zinc-400">分類</label>
+              <button type="button" onclick="openCategoryModal(true)" class="text-[11px] text-amber-400 hover:text-amber-300 font-medium flex items-center gap-0.5">
+                <i data-lucide="plus-circle" class="w-3 h-3"></i>
+                <span>管理分類</span>
+              </button>
+            </div>
+            <div class="relative">
+              <select id="item-category" onchange="onCategoryChangeInForm()" class="w-full pl-3 pr-7 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:outline-none focus:border-amber-500 appearance-none">
+                <!-- 由 JS 動態填入自訂分類 -->
+              </select>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-zinc-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            </div>
           </div>
 
           <div>
@@ -245,7 +334,7 @@
           </div>
         </div>
 
-        <!-- 存放位置下拉選單 + 管理/新增位置快捷 -->
+        <!-- 存放位置選擇 + 管理/新增快捷 -->
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <label class="block text-xs font-medium text-zinc-400">存放位置 <span class="text-rose-400">*</span></label>
@@ -291,7 +380,54 @@
     </div>
   </div>
 
-  <!-- ==================== Modal 2: 存放位置管理（新增 / 編輯 / 刪除） ==================== -->
+  <!-- ==================== Modal 2: 分類管理（新增 / 編輯 / 刪除） ==================== -->
+  <div id="category-modal" class="fixed inset-0 z-[60] hidden items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4">
+    <div class="animate-modal w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto" style="padding-bottom: calc(1.5rem + var(--sab));">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center shrink-0">
+            <i data-lucide="tags" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-zinc-100">備品分類管理</h2>
+            <p class="text-[11px] text-zinc-400">可新增分類、修改名稱與圖示或安全刪除</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeCategoryModal()" class="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-zinc-200 flex items-center justify-center">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- 新增分類表單（Emoji + 分類名稱） -->
+      <form onsubmit="addNewCategory(event)" class="flex gap-2">
+        <input type="text" id="new-category-icon" maxlength="2" value="🏷️" placeholder="🏷️" class="w-12 text-center px-1.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-base focus:outline-none focus:border-amber-500 shrink-0" title="分類 Emoji 圖示" />
+        <input type="text" id="new-category-name" placeholder="輸入新分類名稱，如：寵物用品..." class="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500" />
+        <button type="submit" class="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 active:scale-95 text-zinc-950 text-xs font-bold flex items-center gap-1 shrink-0 transition">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>新增</span>
+        </button>
+      </form>
+
+      <!-- 現有分類清單 -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs text-zinc-400 px-1">
+          <span>已建立的分類（系統固定保留「全部」篩選）</span>
+          <span id="category-total-badge">0 個分類</span>
+        </div>
+        <div id="category-manage-list" class="space-y-2 max-h-[50vh] overflow-y-auto pr-0.5">
+          <!-- 由 JS 動態產生 -->
+        </div>
+      </div>
+
+      <div class="pt-1">
+        <button type="button" onclick="closeCategoryModal()" class="w-full py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition">
+          完成並返回
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== Modal 3: 存放位置管理（新增 / 編輯 / 刪除） ==================== -->
   <div id="location-modal" class="fixed inset-0 z-[60] hidden items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4">
     <div class="animate-modal w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto" style="padding-bottom: calc(1.5rem + var(--sab));">
       <div class="flex items-center justify-between">
@@ -337,7 +473,7 @@
     </div>
   </div>
 
-  <!-- ==================== Modal 3: iOS 主畫面圖示自訂 & 資料備份 ==================== -->
+  <!-- ==================== Modal 4: iOS 主畫面圖示自訂 & 資料備份 ==================== -->
   <div id="settings-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-0 sm:p-4">
     <div class="animate-modal w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-5 max-h-[92vh] overflow-y-auto" style="padding-bottom: calc(1.5rem + var(--sab));">
       <div class="flex items-center justify-between">
@@ -428,7 +564,7 @@
       <!-- 資料匯出與還原 -->
       <div class="space-y-2.5">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold text-zinc-400">庫存與位置資料備份（JSON）</span>
+          <span class="text-xs font-semibold text-zinc-400">庫存、分類、位置與排序完整備份（JSON）</span>
           <span class="text-[11px] text-zinc-500">建議定期匯出保存</span>
         </div>
         <div class="grid grid-cols-2 gap-2.5">
@@ -454,7 +590,7 @@
     </div>
   </div>
 
-  <!-- 自訂確認對話框（避免原生 confirm） -->
+  <!-- 自訂確認對話框 -->
   <div id="confirm-modal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
     <div class="animate-modal w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4 shadow-2xl">
       <div>
@@ -478,20 +614,21 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'home_inventory_v1';
+    const STORAGE_KEY = 'home_inventory_v2';
+    const CATEGORIES_KEY = 'home_inventory_categories_v1';
     const LOCATIONS_KEY = 'home_inventory_locations_v1';
     const ICON_SETTINGS_KEY = 'home_inventory_ios_icon_v1';
+    const VIEW_MODE_KEY = 'home_inventory_view_mode_v1';
 
-    const CATEGORIES = ['全部', '日用衛生', '清潔洗劑', '廚房耗材', '3C電池', '常備醫藥', '食品飲水', '其他備品'];
-    const CATEGORY_ICONS = {
-      '日用衛生': '🧻',
-      '清潔洗劑': '🧴',
-      '廚房耗材': '🍽️',
-      '3C電池': '🔋',
-      '常備醫藥': '🩹',
-      '食品飲水': '🥫',
-      '其他備品': '📦'
-    };
+    const DEFAULT_CATEGORIES = [
+      { id: 'cat-1', name: '日用衛生', icon: '🧻' },
+      { id: 'cat-2', name: '清潔洗劑', icon: '🧴' },
+      { id: 'cat-3', name: '廚房耗材', icon: '🍽️' },
+      { id: 'cat-4', name: '3C電池', icon: '🔋' },
+      { id: 'cat-5', name: '常備醫藥', icon: '🩹' },
+      { id: 'cat-6', name: '食品飲水', icon: '🥫' },
+      { id: 'cat-7', name: '未分類', icon: '📦' }
+    ];
 
     const GRADIENTS = [
       { id: 'indigo', c1: '#6366f1', c2: '#7c3aed', label: '靛紫' },
@@ -503,29 +640,51 @@
     ];
 
     const DEFAULT_LOCATIONS = [
+      '2F浴室鏡櫃',
       '2F儲藏室層架',
       '1F廚房水槽下',
-      '2F浴室鏡櫃',
       '1F電視櫃抽屜',
       '1F玄關鞋櫃上層'
     ];
 
     const SAMPLE_ITEMS = [
-      { id: '1', name: '抽取式衛生紙 (串)', category: '日用衛生', location: '2F儲藏室層架', qty: 3, minQty: 2, unit: '串', note: '1串12包', updatedAt: Date.now() },
-      { id: '2', name: '洗衣精補充包', category: '清潔洗劑', location: '1F廚房水槽下', qty: 1, minQty: 2, unit: '包', note: '低於安全量提醒', updatedAt: Date.now() - 1000 },
-      { id: '3', name: '3號鹼性電池 (AA)', category: '3C電池', location: '1F電視櫃抽屜', qty: 8, minQty: 4, unit: '顆', note: '遙控器與滑鼠用', updatedAt: Date.now() - 2000 },
-      { id: '4', name: '中號加厚垃圾袋', category: '廚房耗材', location: '1F廚房水槽下', qty: 0, minQty: 2, unit: '捲', note: '已缺貨，需補貨', updatedAt: Date.now() - 3000 },
-      { id: '5', name: '薄荷牙膏', category: '日用衛生', location: '2F浴室鏡櫃', qty: 2, minQty: 1, unit: '條', note: '', updatedAt: Date.now() - 4000 },
-      { id: '6', name: '75% 酒精噴霧補充瓶', category: '常備醫藥', location: '1F玄關鞋櫃上層', qty: 2, minQty: 1, unit: '瓶', note: '', updatedAt: Date.now() - 5000 }
+      { id: '1', name: '牙刷', emoji: '🪥', photoDataUrl: '', category: '日用衛生', location: '2F浴室鏡櫃', qty: 3, minQty: 2, unit: '支', note: '軟毛備用', sortOrder: 0, updatedAt: Date.now() },
+      { id: '2', name: '牙膏', emoji: '🧴', photoDataUrl: '', category: '日用衛生', location: '2F浴室鏡櫃', qty: 2, minQty: 1, unit: '條', note: '', sortOrder: 1, updatedAt: Date.now() },
+      { id: '3', name: '醫療口罩', emoji: '😷', photoDataUrl: '', category: '常備醫藥', location: '1F玄關鞋櫃上層', qty: 1, minQty: 2, unit: '盒', note: '低於安全庫存', sortOrder: 2, updatedAt: Date.now() },
+      { id: '4', name: '抽取式衛生紙', emoji: '🧻', photoDataUrl: '', category: '日用衛生', location: '2F儲藏室層架', qty: 4, minQty: 2, unit: '串', note: '1串12包', sortOrder: 3, updatedAt: Date.now() },
+      { id: '5', name: '化妝棉', emoji: '⬜', photoDataUrl: '', category: '日用衛生', location: '2F浴室鏡櫃', qty: 0, minQty: 1, unit: '盒', note: '已缺貨，下次採買', sortOrder: 4, updatedAt: Date.now() },
+      { id: '6', name: '洗衣精補充包', emoji: '🫧', photoDataUrl: '', category: '清潔洗劑', location: '1F廚房水槽下', qty: 2, minQty: 1, unit: '包', note: '', sortOrder: 5, updatedAt: Date.now() },
+      { id: '7', name: '3號鹼性電池', emoji: '🔋', photoDataUrl: '', category: '3C電池', location: '1F電視櫃抽屜', qty: 8, minQty: 4, unit: '顆', note: '遙控器用', sortOrder: 6, updatedAt: Date.now() },
+      { id: '8', name: '中號垃圾袋', emoji: '🗑️', photoDataUrl: '', category: '廚房耗材', location: '1F廚房水槽下', qty: 3, minQty: 2, unit: '捲', note: '', sortOrder: 7, updatedAt: Date.now() },
+      { id: '9', name: '純水濕紙巾', emoji: '💧', photoDataUrl: '', category: '日用衛生', location: '2F儲藏室層架', qty: 5, minQty: 2, unit: '包', note: '', sortOrder: 8, updatedAt: Date.now() }
     ];
 
     let inventory = [];
+    let categories = []; // [{ id, name, icon }]
     let locations = [];
     let currentCategory = '全部';
     let currentStockFilter = 'all';
+    let viewMode = 'grid'; // 'grid' | 'list'
+    let isSortMode = false;
+
+    let editingCategoryIndex = -1;
+    let returnToItemModalAfterCategory = false;
+
     let editingLocationIndex = -1;
     let returnToItemModalAfterLocation = false;
+
     let pendingConfirmAction = null;
+    let currentFormPhotoDataUrl = '';
+
+    // 拖曳排序狀態（支援 Touch Events 與 Pointer/Drag）
+    let dragState = {
+      active: false,
+      sourceId: null,
+      targetId: null,
+      ghostEl: null,
+      offsetX: 0,
+      offsetY: 0
+    };
 
     let iconConfig = {
       appName: '備品庫存',
@@ -535,21 +694,530 @@
       customImageDataUrl: ''
     };
 
-    // 初始化應用程式
+    // ==================== 初始化 ====================
     function init() {
       try {
+        viewMode = localStorage.getItem(VIEW_MODE_KEY) || 'grid';
         loadIconSettings();
         applyIconToDocument();
+        loadCategories();
         loadLocations();
         loadInventory();
+        syncAllCategoryLists();
         syncAllLocationLists();
-        renderCategories();
+        updateViewModeUI();
         renderGradientPicker();
         renderInventory();
         lucide.createIcons();
       } catch (err) {
         console.error('初始化失敗:', err);
         showToast('初始化時發生錯誤');
+      }
+    }
+
+    function getCategoryIconByName(catName) {
+      const found = categories.find(c => c.name === catName);
+      return found ? found.icon : '📦';
+    }
+
+    // ==================== 分類管理（新增 / 編輯 / 刪除） ====================
+    function loadCategories() {
+      try {
+        const saved = localStorage.getItem(CATEGORIES_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            categories = parsed;
+            return;
+          }
+        }
+        categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+        saveCategoriesToStorage();
+      } catch (e) {
+        categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+      }
+    }
+
+    function saveCategoriesToStorage() {
+      localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+    }
+
+    // 同步首頁分類膠囊列、新增備品表單的分類選單，以及確保庫存現有分類都在清單中
+    function syncAllCategoryLists() {
+      let addedFromItems = false;
+      inventory.forEach(item => {
+        if (item.category && !categories.some(c => c.name === item.category)) {
+          categories.push({
+            id: `cat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            name: item.category,
+            icon: item.emoji || '📦'
+          });
+          addedFromItems = true;
+        }
+      });
+      if (addedFromItems) saveCategoriesToStorage();
+
+      // 若目前選取的篩選分類已被刪除，退回「全部」
+      if (currentCategory !== '全部' && !categories.some(c => c.name === currentCategory)) {
+        currentCategory = '全部';
+      }
+
+      // 1. 渲染首頁分類膠囊列
+      renderCategories();
+
+      // 2. 同步新增/編輯備品表單的分類下拉選單
+      const itemCatSelect = document.getElementById('item-category');
+      if (itemCatSelect) {
+        const prevVal = itemCatSelect.value;
+        if (categories.length === 0) {
+          itemCatSelect.innerHTML = `<option value="未分類">📦 未分類</option>`;
+        } else {
+          itemCatSelect.innerHTML = categories.map(cat =>
+            `<option value="${escapeHtml(cat.name)}">${escapeHtml(cat.icon)} ${escapeHtml(cat.name)}</option>`
+          ).join('');
+          if (categories.some(c => c.name === prevVal)) {
+            itemCatSelect.value = prevVal;
+          }
+        }
+      }
+    }
+
+    function renderCategories() {
+      const container = document.getElementById('category-pills');
+      if (!container) return;
+
+      const allPill = `
+        <button type="button" onclick="setCategory('全部')" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
+          currentCategory === '全部'
+            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
+            : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+        }">
+          <span>全部</span>
+          <span class="px-1.5 py-0.2 rounded-full text-[10px] ${currentCategory === '全部' ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'}">${inventory.length}</span>
+        </button>
+      `;
+
+      const customPills = categories.map(cat => {
+        const active = currentCategory === cat.name;
+        const count = inventory.filter(i => i.category === cat.name).length;
+        return `
+          <button type="button" onclick="setCategory('${escapeJsString(cat.name)}')" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
+            active
+              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
+              : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
+          }">
+            <span>${escapeHtml(cat.icon)} ${escapeHtml(cat.name)}</span>
+            <span class="px-1.5 py-0.2 rounded-full text-[10px] ${active ? 'bg-white/20 text-white' : 'bg-zinc-800 text-zinc-400'}">${count}</span>
+          </button>
+        `;
+      }).join('');
+
+      const managePill = `
+        <button type="button" onclick="openCategoryModal(false)" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap bg-zinc-900/70 hover:bg-zinc-800 text-amber-400 border border-dashed border-amber-500/40 transition shrink-0">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>管理分類</span>
+        </button>
+      `;
+
+      container.innerHTML = allPill + customPills + managePill;
+    }
+
+    function setCategory(cat) {
+      currentCategory = cat;
+      renderCategories();
+      renderInventory();
+    }
+
+    function openCategoryModal(fromItemModal = false) {
+      returnToItemModalAfterCategory = Boolean(fromItemModal);
+      editingCategoryIndex = -1;
+      document.getElementById('new-category-icon').value = '🏷️';
+      document.getElementById('new-category-name').value = '';
+      renderCategoryManageList();
+
+      const modal = document.getElementById('category-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      lucide.createIcons();
+    }
+
+    function closeCategoryModal() {
+      editingCategoryIndex = -1;
+      const modal = document.getElementById('category-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      syncAllCategoryLists();
+      renderInventory();
+      lucide.createIcons();
+    }
+
+    function renderCategoryManageList() {
+      const listEl = document.getElementById('category-manage-list');
+      document.getElementById('category-total-badge').textContent = `${categories.length} 個分類`;
+
+      if (categories.length === 0) {
+        listEl.innerHTML = `
+          <div class="py-8 text-center text-xs text-zinc-500 bg-zinc-950/60 rounded-2xl border border-dashed border-zinc-800">
+            尚未建立任何自訂分類，請在上方輸入新增
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = categories.map((cat, idx) => {
+        const count = inventory.filter(i => i.category === cat.name).length;
+        const isEditing = editingCategoryIndex === idx;
+
+        if (isEditing) {
+          return `
+            <div class="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-950 border border-amber-500/60">
+              <input type="text" id="edit-cat-icon-${idx}" maxlength="2" value="${escapeHtml(cat.icon)}" class="w-11 text-center px-1 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-base focus:outline-none focus:border-amber-400 shrink-0" />
+              <input type="text" id="edit-cat-name-${idx}" value="${escapeHtml(cat.name)}" class="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-zinc-900 border border-zinc-700 text-zinc-100 text-sm focus:outline-none focus:border-amber-400" onkeydown="if(event.key==='Enter'){event.preventDefault();saveEditedCategory(${idx});}" />
+              <button type="button" onclick="saveEditedCategory(${idx})" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-bold shrink-0">
+                儲存
+              </button>
+              <button type="button" onclick="cancelEditCategory()" class="px-2 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs shrink-0">
+                取消
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="flex items-center justify-between gap-2 p-3 rounded-xl bg-zinc-950/90 border border-zinc-800/90 hover:border-zinc-700 transition">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-base shrink-0">${escapeHtml(cat.icon)}</span>
+              <span class="text-sm font-medium text-zinc-100 truncate">${escapeHtml(cat.name)}</span>
+              <span class="px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px] text-zinc-400 shrink-0">${count} 項</span>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button type="button" onclick="startEditCategory(${idx})" class="p-2 rounded-lg text-zinc-400 hover:text-amber-400 hover:bg-zinc-900 transition" title="編輯分類">
+                <i data-lucide="pencil" class="w-4 h-4"></i>
+              </button>
+              <button type="button" onclick="deleteCategory(${idx})" class="p-2 rounded-lg text-zinc-400 hover:text-rose-400 hover:bg-zinc-900 transition" title="刪除分類">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function addNewCategory(e) {
+      e.preventDefault();
+      const iconInput = document.getElementById('new-category-icon');
+      const nameInput = document.getElementById('new-category-name');
+      const newIcon = iconInput.value.trim() || '🏷️';
+      const newName = nameInput.value.trim();
+
+      if (!newName) {
+        showToast('請輸入分類名稱');
+        return;
+      }
+      if (newName === '全部') {
+        showToast('「全部」為系統保留篩選名稱，請使用其他名稱');
+        return;
+      }
+      if (categories.some(c => c.name === newName)) {
+        showToast('此分類名稱已存在');
+        return;
+      }
+
+      categories.push({
+        id: `cat-${Date.now()}`,
+        name: newName,
+        icon: newIcon
+      });
+      saveCategoriesToStorage();
+      syncAllCategoryLists();
+
+      if (returnToItemModalAfterCategory) {
+        const selectEl = document.getElementById('item-category');
+        if (selectEl) {
+          selectEl.value = newName;
+          onCategoryChangeInForm();
+        }
+      }
+
+      nameInput.value = '';
+      renderCategoryManageList();
+      showToast(`已新增分類：${newIcon} ${newName}`);
+    }
+
+    function startEditCategory(idx) {
+      editingCategoryIndex = idx;
+      renderCategoryManageList();
+      setTimeout(() => {
+        const inp = document.getElementById(`edit-cat-name-${idx}`);
+        if (inp) {
+          inp.focus();
+          inp.select();
+        }
+      }, 25);
+    }
+
+    function cancelEditCategory() {
+      editingCategoryIndex = -1;
+      renderCategoryManageList();
+    }
+
+    function saveEditedCategory(idx) {
+      const iconInp = document.getElementById(`edit-cat-icon-${idx}`);
+      const nameInp = document.getElementById(`edit-cat-name-${idx}`);
+      if (!nameInp) return;
+
+      const updatedIcon = (iconInp ? iconInp.value.trim() : '') || '🏷️';
+      const updatedName = nameInp.value.trim();
+      const targetCat = categories[idx];
+      const oldName = targetCat.name;
+
+      if (!updatedName) {
+        showToast('分類名稱不能為空白');
+        return;
+      }
+      if (updatedName === '全部') {
+        showToast('「全部」為系統保留名稱');
+        return;
+      }
+      if (updatedName !== oldName && categories.some(c => c.name === updatedName)) {
+        showToast('已有相同的分類名稱');
+        return;
+      }
+
+      categories[idx] = { ...targetCat, name: updatedName, icon: updatedIcon };
+
+      // 同步更新所有屬於舊分類名稱的備品
+      let updatedCount = 0;
+      inventory.forEach(item => {
+        if (item.category === oldName) {
+          item.category = updatedName;
+          updatedCount++;
+        }
+      });
+
+      if (currentCategory === oldName) {
+        currentCategory = updatedName;
+      }
+
+      saveCategoriesToStorage();
+      saveInventoryToStorage();
+      syncAllCategoryLists();
+      editingCategoryIndex = -1;
+      renderCategoryManageList();
+      renderInventory();
+      showToast(updatedCount > 0 ? `已更新分類並同步 ${updatedCount} 項備品` : '已更新分類資訊');
+    }
+
+    function deleteCategory(idx) {
+      const targetCat = categories[idx];
+      if (!targetCat) return;
+      const relatedItems = inventory.filter(i => i.category === targetCat.name);
+
+      const message = relatedItems.length > 0
+        ? `「${targetCat.icon} ${targetCat.name}」目前還有 ${relatedItems.length} 項備品。確定要刪除嗎？這些備品將會自動安全歸類至「未分類」。`
+        : `確定要刪除分類「${targetCat.icon} ${targetCat.name}」嗎？`;
+
+      openConfirmModal('刪除備品分類', message, () => {
+        if (relatedItems.length > 0) {
+          if (!categories.some(c => c.name === '未分類') && targetCat.name !== '未分類') {
+            categories.push({ id: `cat-${Date.now()}`, name: '未分類', icon: '📦' });
+          }
+          inventory.forEach(item => {
+            if (item.category === targetCat.name) {
+              item.category = '未分類';
+            }
+          });
+          saveInventoryToStorage();
+        }
+
+        categories = categories.filter(c => c.id !== targetCat.id);
+        if (currentCategory === targetCat.name) {
+          currentCategory = '全部';
+        }
+
+        saveCategoriesToStorage();
+        syncAllCategoryLists();
+        editingCategoryIndex = -1;
+        renderCategoryManageList();
+        renderInventory();
+        showToast(`已刪除分類：${targetCat.name}`);
+      });
+    }
+
+    // ==================== 檢視模式切換（格子 vs 清單） ====================
+    function setViewMode(mode) {
+      viewMode = mode;
+      localStorage.setItem(VIEW_MODE_KEY, mode);
+      updateViewModeUI();
+      renderInventory();
+    }
+
+    function updateViewModeUI() {
+      const gridBtn = document.getElementById('view-grid-btn');
+      const listBtn = document.getElementById('view-list-btn');
+      const container = document.getElementById('inventory-container');
+
+      if (viewMode === 'grid') {
+        gridBtn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-600 text-white shadow transition';
+        listBtn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition';
+        container.className = 'grid grid-cols-3 sm:grid-cols-4 gap-2.5 sm:gap-3.5';
+      } else {
+        listBtn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-600 text-white shadow transition';
+        gridBtn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-zinc-400 hover:text-zinc-200 transition';
+        container.className = 'grid grid-cols-1 sm:grid-cols-2 gap-3';
+      }
+    }
+
+    // ==================== 編輯排序模式（支援 iOS 手指拖曳與箭頭微調） ====================
+    function toggleSortMode() {
+      isSortMode = !isSortMode;
+      const btn = document.getElementById('toggle-sort-btn');
+      const label = document.getElementById('toggle-sort-label');
+      const banner = document.getElementById('sort-mode-banner');
+      const badge = document.getElementById('sort-hint-badge');
+
+      if (isSortMode) {
+        btn.className = 'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold shadow-md shadow-indigo-600/30 transition';
+        label.textContent = '完成排序';
+        banner.classList.remove('hidden');
+        badge.classList.remove('hidden');
+      } else {
+        btn.className = 'flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-200 border border-zinc-700/80 text-xs font-semibold shadow-sm transition';
+        label.textContent = '編輯排序';
+        banner.classList.add('hidden');
+        badge.classList.add('hidden');
+        saveInventoryToStorage();
+        showToast('已儲存自訂排序');
+      }
+
+      renderInventory();
+    }
+
+    function moveItemOrder(itemId, direction) {
+      const visibleItems = getFilteredAndSortedItems();
+      const visibleIdx = visibleItems.findIndex(i => i.id === itemId);
+      const swapVisibleIdx = visibleIdx + direction;
+      if (visibleIdx === -1 || swapVisibleIdx < 0 || swapVisibleIdx >= visibleItems.length) return;
+
+      const targetItem = visibleItems[swapVisibleIdx];
+      swapItemsInInventory(itemId, targetItem.id);
+      renderInventory();
+    }
+
+    function swapItemsInInventory(idA, idB) {
+      if (!idA || !idB || idA === idB) return;
+      inventory.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      const idxA = inventory.findIndex(i => i.id === idA);
+      const idxB = inventory.findIndex(i => i.id === idB);
+      if (idxA === -1 || idxB === -1) return;
+
+      const [moved] = inventory.splice(idxA, 1);
+      inventory.splice(idxB, 0, moved);
+
+      inventory.forEach((item, index) => {
+        item.sortOrder = index;
+      });
+      saveInventoryToStorage();
+    }
+
+    // 統一支援 Touch Events（iOS Safari）與 Mouse Events 的拖曳換位
+    function handleDragStart(e, itemId) {
+      if (!isSortMode) return;
+      if (e.target.closest('button')) return;
+
+      const isTouch = e.type === 'touchstart';
+      const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+      const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+      if (e.cancelable) e.preventDefault();
+
+      const cardEl = e.currentTarget;
+      const rect = cardEl.getBoundingClientRect();
+
+      dragState.active = true;
+      dragState.sourceId = itemId;
+      dragState.targetId = itemId;
+      dragState.offsetX = clientX - rect.left;
+      dragState.offsetY = clientY - rect.top;
+
+      cardEl.classList.add('is-dragging-source');
+
+      const ghost = cardEl.cloneNode(true);
+      ghost.style.position = 'fixed';
+      ghost.style.left = `${rect.left}px`;
+      ghost.style.top = `${rect.top}px`;
+      ghost.style.width = `${rect.width}px`;
+      ghost.style.height = `${rect.height}px`;
+      ghost.style.zIndex = '9999';
+      ghost.style.pointerEvents = 'none';
+      ghost.style.opacity = '0.92';
+      ghost.style.transform = 'scale(1.06)';
+      ghost.style.boxShadow = '0 20px 35px rgba(0, 0, 0, 0.65)';
+      ghost.classList.remove('is-dragging-source', 'is-sorting-card');
+      document.body.appendChild(ghost);
+      dragState.ghostEl = ghost;
+
+      if (isTouch) {
+        window.addEventListener('touchmove', handleDragMove, { passive: false });
+        window.addEventListener('touchend', handleDragEnd);
+        window.addEventListener('touchcancel', handleDragEnd);
+      } else {
+        window.addEventListener('mousemove', handleDragMove, { passive: false });
+        window.addEventListener('mouseup', handleDragEnd);
+      }
+    }
+
+    function handleDragMove(e) {
+      if (!dragState.active || !dragState.ghostEl) return;
+      if (e.cancelable) e.preventDefault();
+
+      const isTouch = e.type === 'touchmove';
+      const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+      const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+      dragState.ghostEl.style.left = `${clientX - dragState.offsetX}px`;
+      dragState.ghostEl.style.top = `${clientY - dragState.offsetY}px`;
+
+      const elUnder = document.elementFromPoint(clientX, clientY);
+      const targetCard = elUnder ? elUnder.closest('[data-item-id]') : null;
+
+      document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target'));
+
+      if (targetCard) {
+        const hoverId = targetCard.getAttribute('data-item-id');
+        if (hoverId && hoverId !== dragState.sourceId) {
+          targetCard.classList.add('drag-over-target');
+          dragState.targetId = hoverId;
+        } else {
+          dragState.targetId = dragState.sourceId;
+        }
+      }
+    }
+
+    function handleDragEnd() {
+      if (!dragState.active) return;
+
+      window.removeEventListener('touchmove', handleDragMove);
+      window.removeEventListener('touchend', handleDragEnd);
+      window.removeEventListener('touchcancel', handleDragEnd);
+      window.removeEventListener('mousemove', handleDragMove);
+      window.removeEventListener('mouseup', handleDragEnd);
+
+      if (dragState.ghostEl) {
+        dragState.ghostEl.remove();
+      }
+      document.querySelectorAll('.is-dragging-source, .drag-over-target').forEach(el => {
+        el.classList.remove('is-dragging-source', 'drag-over-target');
+      });
+
+      const { sourceId, targetId } = dragState;
+      dragState = { active: false, sourceId: null, targetId: null, ghostEl: null, offsetX: 0, offsetY: 0 };
+
+      if (sourceId && targetId && sourceId !== targetId) {
+        swapItemsInInventory(sourceId, targetId);
+        renderInventory();
       }
     }
 
@@ -786,9 +1454,14 @@
     // ==================== 庫存資料存取與渲染 ====================
     function loadInventory() {
       try {
-        const saved = localStorage.getItem(STORAGE_KEY);
+        const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('home_inventory_v1');
         inventory = saved ? JSON.parse(saved) : [...SAMPLE_ITEMS];
         if (!Array.isArray(inventory)) inventory = [...SAMPLE_ITEMS];
+        inventory.forEach((item, idx) => {
+          if (typeof item.sortOrder !== 'number') item.sortOrder = idx;
+          if (!item.emoji) item.emoji = getCategoryIconByName(item.category);
+        });
+        inventory.sort((a, b) => a.sortOrder - b.sortOrder);
         if (!saved) saveInventoryToStorage();
       } catch (e) {
         inventory = [...SAMPLE_ITEMS];
@@ -797,29 +1470,6 @@
 
     function saveInventoryToStorage() {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(inventory));
-    }
-
-    function renderCategories() {
-      const container = document.getElementById('category-pills');
-      container.innerHTML = CATEGORIES.map(cat => {
-        const active = currentCategory === cat;
-        const icon = CATEGORY_ICONS[cat] ? `${CATEGORY_ICONS[cat]} ` : '';
-        return `
-          <button type="button" onclick="setCategory('${cat}')" class="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
-            active
-              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
-              : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
-          }">
-            ${icon}${cat}
-          </button>
-        `;
-      }).join('');
-    }
-
-    function setCategory(cat) {
-      currentCategory = cat;
-      renderCategories();
-      renderInventory();
     }
 
     function setStockFilter(filter) {
@@ -858,18 +1508,16 @@
       document.getElementById('count-out').textContent = out;
     }
 
-    function renderInventory() {
-      updateStats();
-
+    function getFilteredAndSortedItems() {
       const searchVal = document.getElementById('search-input').value.trim().toLowerCase();
       const locVal = document.getElementById('location-filter').value;
-      document.getElementById('clear-search-btn').classList.toggle('hidden', !searchVal);
 
       const filtered = inventory.filter(item => {
         const matchCat = currentCategory === '全部' || item.category === currentCategory;
         const matchLoc = locVal === 'ALL' || item.location === locVal;
         const matchSearch = !searchVal ||
           item.name.toLowerCase().includes(searchVal) ||
+          item.category.toLowerCase().includes(searchVal) ||
           item.location.toLowerCase().includes(searchVal) ||
           (item.note && item.note.toLowerCase().includes(searchVal));
 
@@ -880,24 +1528,25 @@
         return matchCat && matchLoc && matchSearch && matchStock;
       });
 
-      // 已缺貨 -> 庫存偏低 -> 正常庫存 依序置頂
-      filtered.sort((a, b) => {
-        const getPriority = (item) => {
-          if (item.qty === 0) return 0;
-          if (item.qty <= item.minQty) return 1;
-          return 2;
-        };
-        const pA = getPriority(a);
-        const pB = getPriority(b);
-        if (pA !== pB) return pA - pB;
-        return (b.updatedAt || 0) - (a.updatedAt || 0);
-      });
+      filtered.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      return filtered;
+    }
 
-      const grid = document.getElementById('inventory-grid');
+    function renderInventory() {
+      updateStats();
+      renderCategories();
+
+      const searchVal = document.getElementById('search-input').value.trim();
+      document.getElementById('clear-search-btn').classList.toggle('hidden', !searchVal);
+
+      const filtered = getFilteredAndSortedItems();
+      document.getElementById('visible-items-count').textContent = `${filtered.length} 件物品`;
+
+      const container = document.getElementById('inventory-container');
       const emptyState = document.getElementById('empty-state');
 
       if (filtered.length === 0) {
-        grid.innerHTML = '';
+        container.innerHTML = '';
         emptyState.classList.remove('hidden');
         lucide.createIcons();
         return;
@@ -905,69 +1554,198 @@
 
       emptyState.classList.add('hidden');
 
-      grid.innerHTML = filtered.map(item => {
-        const isOut = item.qty === 0;
-        const isLow = !isOut && item.qty <= item.minQty;
+      if (viewMode === 'grid') {
+        container.innerHTML = filtered.map((item, idx) => renderGridCard(item, idx, filtered.length)).join('');
+      } else {
+        container.innerHTML = filtered.map((item, idx) => renderListCard(item, idx, filtered.length)).join('');
+      }
 
-        let cardBorder = 'border-zinc-800/90 hover:border-zinc-700';
-        let badgeHtml = '';
-        let qtyColor = 'text-zinc-100';
+      lucide.createIcons();
+    }
 
-        if (isOut) {
-          cardBorder = 'border-rose-500/40 bg-rose-950/10';
-          badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 text-[11px] font-semibold">已缺貨</span>`;
-          qtyColor = 'text-rose-400';
-        } else if (isLow) {
-          cardBorder = 'border-amber-500/40 bg-amber-950/10';
-          badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 text-[11px] font-semibold">庫存偏低</span>`;
-          qtyColor = 'text-amber-400';
-        }
+    // ==================== 格子檢視卡片（3欄方格） ====================
+    function renderGridCard(item, idx, totalVisible) {
+      const isOut = item.qty === 0;
+      const isLow = !isOut && item.qty <= item.minQty;
 
-        const catIcon = CATEGORY_ICONS[item.category] || '📦';
+      let borderClass = 'border-zinc-800/90 hover:border-zinc-700';
+      if (isOut) borderClass = 'border-rose-500/75 ring-1 ring-rose-500/30';
+      else if (isLow) borderClass = 'border-amber-500/60';
 
-        return `
-          <div class="p-4 rounded-2xl bg-zinc-900/90 border ${cardBorder} flex flex-col justify-between gap-3.5 transition">
-            <div class="flex items-start justify-between gap-2">
-              <div class="space-y-1.5 min-w-0">
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="text-xs text-zinc-400">${catIcon} ${escapeHtml(item.category)}</span>
-                  ${badgeHtml}
-                </div>
-                <h3 class="text-base font-bold text-zinc-100 leading-snug break-words">${escapeHtml(item.name)}</h3>
-              </div>
+      const sortingClass = isSortMode ? 'is-sorting-card cursor-grab active:cursor-grabbing' : '';
+      const visualContent = item.photoDataUrl
+        ? `<img src="${item.photoDataUrl}" alt="${escapeHtml(item.name)}" class="w-full h-full object-cover rounded-xl pointer-events-none" />`
+        : `<span class="text-4xl sm:text-5xl select-none pointer-events-none">${escapeHtml(item.emoji || getCategoryIconByName(item.category))}</span>`;
 
-              <button type="button" onclick="openItemModal('${item.id}')" class="p-2 -mr-1.5 -mt-1 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition shrink-0" title="編輯備品">
-                <i data-lucide="pencil" class="w-4 h-4"></i>
-              </button>
+      let cornerBadge = `
+        <span class="px-1.5 py-0.5 rounded-full bg-zinc-950/90 border border-zinc-700/80 text-[10px] font-bold text-zinc-200 shadow">
+          ${item.qty}${escapeHtml(item.unit)}
+        </span>
+      `;
+      if (isOut) {
+        cornerBadge = `
+          <span class="px-2 py-0.5 rounded-full bg-rose-600 text-white text-[10px] font-bold shadow-md shadow-rose-950/80">
+            無備品
+          </span>
+        `;
+      } else if (isLow) {
+        cornerBadge = `
+          <span class="px-1.5 py-0.5 rounded-full bg-amber-500 text-zinc-950 text-[10px] font-bold shadow">
+            剩${item.qty}${escapeHtml(item.unit)}
+          </span>
+        `;
+      }
+
+      const footerArea = isSortMode
+        ? `
+          <div class="flex items-center justify-between gap-1 pt-1">
+            <button type="button" onclick="moveItemOrder('${item.id}', -1)" ${idx === 0 ? 'disabled' : ''} class="flex-1 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center transition" title="往前移">
+              <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+            </button>
+            <span class="text-[10px] font-mono text-zinc-500 px-1">#${idx + 1}</span>
+            <button type="button" onclick="moveItemOrder('${item.id}', 1)" ${idx === totalVisible - 1 ? 'disabled' : ''} class="flex-1 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200 flex items-center justify-center transition" title="往後移">
+              <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `
+        : `
+          <div class="space-y-1.5 pt-0.5">
+            <div class="flex items-center justify-center gap-1 px-1.5 py-0.5 rounded-md bg-zinc-950/90 border border-zinc-800/80 text-[10px] text-emerald-400 truncate">
+              <i data-lucide="map-pin" class="w-2.5 h-2.5 shrink-0"></i>
+              <span class="truncate">${escapeHtml(item.location)}</span>
             </div>
-
-            <div class="flex items-center justify-between gap-2 pt-2 border-t border-zinc-800/80">
-              <div class="min-w-0 space-y-1">
-                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-xs font-medium text-emerald-400 max-w-full">
-                  <i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0"></i>
-                  <span class="truncate">${escapeHtml(item.location)}</span>
-                </div>
-                ${item.note ? `<p class="text-[11px] text-zinc-500 truncate pl-0.5">${escapeHtml(item.note)}</p>` : ''}
-              </div>
-
-              <div class="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800 shrink-0">
-                <button type="button" onclick="adjustQty('${item.id}', -1)" class="w-9 h-9 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-90 text-zinc-300 flex items-center justify-center transition" aria-label="減少數量">
-                  <i data-lucide="minus" class="w-4 h-4"></i>
-                </button>
-                <div class="min-w-[3.1rem] text-center px-1">
-                  <span class="text-base font-bold ${qtyColor}">${item.qty}</span>
-                  <span class="text-[11px] text-zinc-500 ml-0.5">${escapeHtml(item.unit)}</span>
-                </div>
-                <button type="button" onclick="adjustQty('${item.id}', 1)" class="w-9 h-9 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/35 active:scale-90 text-indigo-400 flex items-center justify-center transition" aria-label="增加數量">
-                  <i data-lucide="plus" class="w-4 h-4"></i>
-                </button>
-              </div>
+            <div class="grid grid-cols-2 gap-1">
+              <button type="button" onclick="adjustQty('${item.id}', -1)" class="py-1 rounded-lg bg-zinc-950 hover:bg-zinc-800 active:scale-90 border border-zinc-800 text-zinc-300 flex items-center justify-center transition" aria-label="減少">
+                <i data-lucide="minus" class="w-3 h-3"></i>
+              </button>
+              <button type="button" onclick="adjustQty('${item.id}', 1)" class="py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/35 active:scale-90 border border-indigo-500/30 text-indigo-300 flex items-center justify-center transition" aria-label="增加">
+                <i data-lucide="plus" class="w-3 h-3"></i>
+              </button>
             </div>
           </div>
         `;
-      }).join('');
 
-      lucide.createIcons();
+      return `
+        <div
+          data-item-id="${item.id}"
+          ontouchstart="handleDragStart(event, '${item.id}')"
+          onmousedown="handleDragStart(event, '${item.id}')"
+          class="relative p-2 sm:p-2.5 rounded-2xl bg-zinc-900/95 border ${borderClass} ${sortingClass} flex flex-col justify-between gap-1.5 shadow-sm transition-transform"
+        >
+          <!-- 頂部備品名稱膠囊標籤 -->
+          <div
+            onclick="${isSortMode ? '' : `openItemModal('${item.id}')`}"
+            class="w-full px-2 py-1 rounded-xl bg-zinc-950/90 border border-zinc-800/80 text-center cursor-pointer hover:border-zinc-700 transition"
+          >
+            <div class="text-xs font-bold text-zinc-100 truncate">${escapeHtml(item.name)}</div>
+          </div>
+
+          <!-- 中央大圖示 / 照片方格 + 右下角狀態徽章 -->
+          <div
+            onclick="${isSortMode ? '' : `openItemModal('${item.id}')`}"
+            class="relative aspect-square w-full rounded-xl bg-zinc-950/60 border border-zinc-800/50 flex items-center justify-center overflow-hidden cursor-pointer"
+          >
+            ${visualContent}
+            <div class="absolute bottom-1 right-1 pointer-events-none">
+              ${cornerBadge}
+            </div>
+            ${isSortMode ? `
+              <div class="absolute top-1 right-1 w-5 h-5 rounded-full bg-indigo-600/90 text-white flex items-center justify-center shadow pointer-events-none">
+                <i data-lucide="grip-horizontal" class="w-3 h-3"></i>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- 底部操作列 -->
+          ${footerArea}
+        </div>
+      `;
+    }
+
+    // ==================== 清單檢視卡片 ====================
+    function renderListCard(item, idx, totalVisible) {
+      const isOut = item.qty === 0;
+      const isLow = !isOut && item.qty <= item.minQty;
+
+      let cardBorder = 'border-zinc-800/90 hover:border-zinc-700';
+      let badgeHtml = '';
+      let qtyColor = 'text-zinc-100';
+
+      if (isOut) {
+        cardBorder = 'border-rose-500/50 bg-rose-950/10';
+        badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[11px] font-semibold">無備品</span>`;
+        qtyColor = 'text-rose-400';
+      } else if (isLow) {
+        cardBorder = 'border-amber-500/45 bg-amber-950/10';
+        badgeHtml = `<span class="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 text-[11px] font-semibold">庫存偏低</span>`;
+        qtyColor = 'text-amber-400';
+      }
+
+      const sortingClass = isSortMode ? 'is-sorting-card cursor-grab active:cursor-grabbing' : '';
+      const catIcon = getCategoryIconByName(item.category);
+      const thumbHtml = item.photoDataUrl
+        ? `<img src="${item.photoDataUrl}" alt="${escapeHtml(item.name)}" class="w-11 h-11 rounded-xl object-cover border border-zinc-800 shrink-0 pointer-events-none" />`
+        : `<div class="w-11 h-11 rounded-xl bg-zinc-950 border border-zinc-800 flex items-center justify-center text-2xl shrink-0 pointer-events-none">${escapeHtml(item.emoji || catIcon)}</div>`;
+
+      return `
+        <div
+          data-item-id="${item.id}"
+          ontouchstart="handleDragStart(event, '${item.id}')"
+          onmousedown="handleDragStart(event, '${item.id}')"
+          class="p-3.5 rounded-2xl bg-zinc-900/90 border ${cardBorder} ${sortingClass} flex flex-col justify-between gap-3 transition"
+        >
+          <div class="flex items-start justify-between gap-2.5">
+            <div class="flex items-center gap-3 min-w-0">
+              ${thumbHtml}
+              <div class="space-y-1 min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span class="text-[11px] text-zinc-400">${escapeHtml(catIcon)} ${escapeHtml(item.category)}</span>
+                  ${badgeHtml}
+                </div>
+                <h3 class="text-sm sm:text-base font-bold text-zinc-100 leading-snug truncate">${escapeHtml(item.name)}</h3>
+              </div>
+            </div>
+
+            ${isSortMode ? `
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" onclick="moveItemOrder('${item.id}', -1)" ${idx === 0 ? 'disabled' : ''} class="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200">
+                  <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                </button>
+                <button type="button" onclick="moveItemOrder('${item.id}', 1)" ${idx === totalVisible - 1 ? 'disabled' : ''} class="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 disabled:opacity-30 text-zinc-200">
+                  <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                </button>
+              </div>
+            ` : `
+              <button type="button" onclick="openItemModal('${item.id}')" class="p-2 -mr-1 -mt-1 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition shrink-0" title="編輯備品">
+                <i data-lucide="pencil" class="w-4 h-4"></i>
+              </button>
+            `}
+          </div>
+
+          <div class="flex items-center justify-between gap-2 pt-2 border-t border-zinc-800/80">
+            <div class="min-w-0 space-y-1">
+              <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-zinc-950 border border-zinc-800 text-xs font-medium text-emerald-400 max-w-full">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 shrink-0"></i>
+                <span class="truncate">${escapeHtml(item.location)}</span>
+              </div>
+              ${item.note ? `<p class="text-[11px] text-zinc-500 truncate pl-0.5">${escapeHtml(item.note)}</p>` : ''}
+            </div>
+
+            <div class="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800 shrink-0">
+              <button type="button" onclick="adjustQty('${item.id}', -1)" class="w-8 h-8 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-90 text-zinc-300 flex items-center justify-center transition" aria-label="減少數量">
+                <i data-lucide="minus" class="w-3.5 h-3.5"></i>
+              </button>
+              <div class="min-w-[3rem] text-center px-1">
+                <span class="text-sm font-bold ${qtyColor}">${item.qty}</span>
+                <span class="text-[11px] text-zinc-500 ml-0.5">${escapeHtml(item.unit)}</span>
+              </div>
+              <button type="button" onclick="adjustQty('${item.id}', 1)" class="w-8 h-8 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/35 active:scale-90 text-indigo-400 flex items-center justify-center transition" aria-label="增加數量">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
     }
 
     function adjustQty(id, delta) {
@@ -984,10 +1762,15 @@
 
     // ==================== 新增 / 編輯備品 Modal ====================
     function openItemModal(id = null) {
+      if (categories.length === 0) {
+        categories = [{ id: `cat-${Date.now()}`, name: '未分類', icon: '📦' }];
+        saveCategoriesToStorage();
+      }
       if (locations.length === 0) {
         locations = ['未指定位置'];
         saveLocationsToStorage();
       }
+      syncAllCategoryLists();
       syncAllLocationLists();
 
       const modal = document.getElementById('item-modal');
@@ -1000,6 +1783,8 @@
         title.textContent = '編輯備品';
         document.getElementById('item-id').value = item.id;
         document.getElementById('item-name').value = item.name;
+        document.getElementById('item-emoji').value = item.emoji || getCategoryIconByName(item.category);
+        currentFormPhotoDataUrl = item.photoDataUrl || '';
         document.getElementById('item-category').value = item.category;
         document.getElementById('item-unit').value = item.unit;
         document.getElementById('item-location-select').value = item.location;
@@ -1011,9 +1796,17 @@
         title.textContent = '新增備品';
         document.getElementById('item-form').reset();
         document.getElementById('item-id').value = '';
+        currentFormPhotoDataUrl = '';
         document.getElementById('item-unit').value = '個';
         document.getElementById('item-qty').value = 1;
         document.getElementById('item-min').value = 1;
+
+        const defaultCat = (currentCategory !== '全部' && categories.some(c => c.name === currentCategory))
+          ? currentCategory
+          : categories[0].name;
+        document.getElementById('item-category').value = defaultCat;
+        document.getElementById('item-emoji').value = getCategoryIconByName(defaultCat);
+
         const currentFilterLoc = document.getElementById('location-filter').value;
         if (currentFilterLoc !== 'ALL' && locations.includes(currentFilterLoc)) {
           document.getElementById('item-location-select').value = currentFilterLoc;
@@ -1021,6 +1814,7 @@
         delBtn.classList.add('hidden');
       }
 
+      updateItemVisualPreview();
       modal.classList.remove('hidden');
       modal.classList.add('flex');
       lucide.createIcons();
@@ -1032,34 +1826,109 @@
       modal.classList.remove('flex');
     }
 
+    function onCategoryChangeInForm() {
+      const cat = document.getElementById('item-category').value;
+      const emojiInput = document.getElementById('item-emoji');
+      emojiInput.value = getCategoryIconByName(cat);
+      updateItemVisualPreview();
+    }
+
+    function updateItemVisualPreview() {
+      const box = document.getElementById('item-visual-preview');
+      const clearBtn = document.getElementById('clear-item-photo-btn');
+      const emojiVal = document.getElementById('item-emoji').value.trim() || '📦';
+
+      if (currentFormPhotoDataUrl) {
+        box.innerHTML = `<img src="${currentFormPhotoDataUrl}" alt="Item Preview" class="w-full h-full object-cover" />`;
+        clearBtn.classList.remove('hidden');
+      } else {
+        box.textContent = emojiVal;
+        clearBtn.classList.add('hidden');
+      }
+    }
+
+    function clearItemPhoto() {
+      currentFormPhotoDataUrl = '';
+      updateItemVisualPreview();
+    }
+
+    function handleItemPhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const size = 160;
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+
+          const minSide = Math.min(img.width, img.height);
+          const sx = (img.width - minSide) / 2;
+          const sy = (img.height - minSide) / 2;
+          ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+
+          currentFormPhotoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+          updateItemVisualPreview();
+          showToast('已載入物品照片');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+      event.target.value = '';
+    }
+
     function saveItem(e) {
       e.preventDefault();
       const id = document.getElementById('item-id').value;
       const locationVal = document.getElementById('item-location-select').value || '未指定位置';
-      const itemData = {
-        id: id || Date.now().toString(),
-        name: document.getElementById('item-name').value.trim(),
-        category: document.getElementById('item-category').value,
-        unit: document.getElementById('item-unit').value.trim() || '個',
-        location: locationVal,
-        qty: Math.max(0, parseInt(document.getElementById('item-qty').value, 10) || 0),
-        minQty: Math.max(0, parseInt(document.getElementById('item-min').value, 10) || 0),
-        note: document.getElementById('item-note').value.trim(),
-        updatedAt: Date.now()
-      };
-
-      if (!itemData.name) return;
+      const categoryVal = document.getElementById('item-category').value || '未分類';
+      const emojiVal = document.getElementById('item-emoji').value.trim() || getCategoryIconByName(categoryVal);
 
       if (id) {
         const idx = inventory.findIndex(i => i.id === id);
-        if (idx !== -1) inventory[idx] = itemData;
+        if (idx !== -1) {
+          inventory[idx] = {
+            ...inventory[idx],
+            name: document.getElementById('item-name').value.trim(),
+            emoji: emojiVal,
+            photoDataUrl: currentFormPhotoDataUrl,
+            category: categoryVal,
+            unit: document.getElementById('item-unit').value.trim() || '個',
+            location: locationVal,
+            qty: Math.max(0, parseInt(document.getElementById('item-qty').value, 10) || 0),
+            minQty: Math.max(0, parseInt(document.getElementById('item-min').value, 10) || 0),
+            note: document.getElementById('item-note').value.trim(),
+            updatedAt: Date.now()
+          };
+        }
         showToast('已更新備品資訊');
       } else {
-        inventory.unshift(itemData);
+        const minOrder = inventory.length > 0 ? Math.min(...inventory.map(i => i.sortOrder ?? 0)) - 1 : 0;
+        const newItem = {
+          id: Date.now().toString(),
+          name: document.getElementById('item-name').value.trim(),
+          emoji: emojiVal,
+          photoDataUrl: currentFormPhotoDataUrl,
+          category: categoryVal,
+          unit: document.getElementById('item-unit').value.trim() || '個',
+          location: locationVal,
+          qty: Math.max(0, parseInt(document.getElementById('item-qty').value, 10) || 0),
+          minQty: Math.max(0, parseInt(document.getElementById('item-min').value, 10) || 0),
+          note: document.getElementById('item-note').value.trim(),
+          sortOrder: minOrder,
+          updatedAt: Date.now()
+        };
+        inventory.unshift(newItem);
+        inventory.forEach((item, index) => { item.sortOrder = index; });
         showToast('已新增備品');
       }
 
       saveInventoryToStorage();
+      syncAllCategoryLists();
       syncAllLocationLists();
       renderInventory();
       closeItemModal();
@@ -1070,6 +1939,7 @@
       if (!id) return;
       openConfirmModal('刪除備品', '確定要刪除這筆備品嗎？刪除後無法復原。', () => {
         inventory = inventory.filter(i => i.id !== id);
+        inventory.forEach((item, index) => { item.sortOrder = index; });
         saveInventoryToStorage();
         renderInventory();
         closeItemModal();
@@ -1131,7 +2001,7 @@
       const headerBox = document.getElementById('header-icon-preview');
       if (iconConfig.mode === 'image' && iconConfig.customImageDataUrl) {
         headerBox.style.background = 'none';
-        headerBox.innerHTML = `<img src="${iconConfig.customImageDataUrl}" alt="App Icon" class="w-full h-full rounded-xl object-cover" />`;
+        headerBox.innerHTML = `<img src="${iconConfig.customImageDataUrl}" alt="App Icon" class="w-full h-full object-cover" />`;
       } else {
         const gradObj = GRADIENTS.find(g => g.id === iconConfig.gradientId) || GRADIENTS[0];
         headerBox.style.background = `linear-gradient(135deg, ${gradObj.c1}, ${gradObj.c2})`;
@@ -1252,11 +2122,12 @@
       }
     }
 
-    // ==================== 資料備份與還原 ====================
+    // ==================== 資料備份與還原（包含備品、分類、位置、排序） ====================
     function exportData() {
       const backupPayload = {
-        version: 2,
+        version: 4,
         exportedAt: new Date().toISOString(),
+        categories: categories,
         locations: locations,
         inventory: inventory
       };
@@ -1266,7 +2137,7 @@
       const a = document.createElement('a');
       const dateStr = new Date().toISOString().slice(0, 10);
       a.href = url;
-      a.download = `備品庫存與位置備份_${dateStr}.json`;
+      a.download = `備品庫存完整備份_${dateStr}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -1285,6 +2156,10 @@
             inventory = parsed;
           } else if (parsed && Array.isArray(parsed.inventory)) {
             inventory = parsed.inventory;
+            if (Array.isArray(parsed.categories) && parsed.categories.length > 0) {
+              categories = parsed.categories;
+              saveCategoriesToStorage();
+            }
             if (Array.isArray(parsed.locations)) {
               locations = parsed.locations;
               saveLocationsToStorage();
@@ -1292,7 +2167,11 @@
           } else {
             throw new Error('格式不符');
           }
+          inventory.forEach((item, idx) => {
+            if (typeof item.sortOrder !== 'number') item.sortOrder = idx;
+          });
           saveInventoryToStorage();
+          syncAllCategoryLists();
           syncAllLocationLists();
           renderInventory();
           closeSettingsModal();
@@ -1306,15 +2185,20 @@
     }
 
     function resetToSampleData() {
-      openConfirmModal('重置預設範例', '這將會覆蓋目前的庫存與位置清單並恢復為預設範例，確定要繼續嗎？', () => {
+      openConfirmModal('重置預設範例', '這將會覆蓋目前的庫存、分類、位置與排序並恢復為預設範例，確定要繼續嗎？', () => {
+        categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
         locations = [...DEFAULT_LOCATIONS];
         inventory = SAMPLE_ITEMS.map((item, idx) => ({
           ...item,
           id: `${Date.now()}-${idx}`,
+          sortOrder: idx,
           updatedAt: Date.now() - idx * 1000
         }));
+        currentCategory = '全部';
+        saveCategoriesToStorage();
         saveLocationsToStorage();
         saveInventoryToStorage();
+        syncAllCategoryLists();
         syncAllLocationLists();
         renderInventory();
         closeSettingsModal();
@@ -1366,6 +2250,11 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    function escapeJsString(str) {
+      if (!str) return '';
+      return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     }
 
     window.addEventListener('DOMContentLoaded', init);
