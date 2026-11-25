@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>居家備品庫存管家</title>
+
+  <!-- iOS 主畫面 PWA 與圖示 Meta 設定 -->
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" id="ios-app-title" content="備品庫存" />
@@ -15,6 +17,19 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans TC', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
@@ -29,15 +44,16 @@
       background-color: #09090b;
       color: #f4f4f5;
       -webkit-tap-highlight-color: transparent;
-      overscroll-behavior-y: none;
       padding-top: var(--sat);
-      padding-bottom: calc(5.5rem + var(--sab));
+      padding-bottom: calc(6rem + var(--sab));
     }
 
+    /* 防止 iOS 聚焦輸入框時自動放大畫面 */
     input, select, textarea {
       font-size: 16px !important;
     }
 
+    /* 隱藏捲軸但保留橫向或縱向滑動 */
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
@@ -47,9 +63,16 @@
     }
 
     @keyframes modalIn {
-      from { opacity: 0; transform: translateY(14px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
     }
+
     .animate-modal {
       animation: modalIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
@@ -61,35 +84,34 @@
 </head>
 <body class="min-h-screen antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
 
-  <!-- 頂部導覽列 -->
-  <header class="sticky top-0 z-30 bg-zinc-950/85 backdrop-blur-xl border-b border-zinc-800/80">
-    <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
+  <!-- 頂部固定導覽列 -->
+  <header class="sticky top-0 z-30 bg-zinc-950/90 backdrop-blur-xl border-b border-zinc-800/90">
+    <div class="max-w-5xl mx-auto px-3.5 sm:px-6 min-h-[4rem] py-2 flex items-center justify-between gap-2">
+      <!-- 品牌標題區 -->
       <div class="flex items-center gap-2.5 min-w-0">
         <div id="header-icon-preview" class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 shrink-0 text-lg font-bold">
           📦
         </div>
         <div class="min-w-0">
-          <h1 id="header-title-text" class="text-base sm:text-lg font-bold tracking-tight text-zinc-100 truncate">居家備品庫存</h1>
-          <p class="text-[11px] text-zinc-400 truncate">數量追蹤・存放位置管理</p>
+          <h1 id="header-title-text" class="text-sm sm:text-lg font-bold tracking-tight text-zinc-100 truncate">居家備品庫存</h1>
+          <p class="text-[11px] text-zinc-400 truncate hidden xs:block sm:block">數量追蹤・存放位置管理</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-1.5 shrink-0">
-        <!-- 位置管理按鈕 -->
-        <button onclick="openLocationModal()" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-300 border border-zinc-800 text-xs font-medium transition" title="管理存放位置">
-          <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i>
+      <!-- 右側功能按鈕群：位置管理永遠清楚顯示 -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <button type="button" onclick="openLocationModal(false)" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 active:scale-95 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition">
+          <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400 shrink-0"></i>
           <span>位置管理</span>
         </button>
 
-        <!-- iOS 圖示 / 備份設定 -->
-        <button onclick="openSettingsModal()" class="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-300 border border-zinc-800 text-xs font-medium transition" title="iOS圖示與資料備份">
-          <i data-lucide="smartphone" class="w-4 h-4 text-indigo-400"></i>
+        <button type="button" onclick="openSettingsModal()" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 active:scale-95 text-zinc-200 border border-zinc-800 text-xs font-medium transition">
+          <i data-lucide="smartphone" class="w-4 h-4 text-indigo-400 shrink-0"></i>
           <span class="hidden sm:inline">iOS圖示 / 備份</span>
-          <span class="sm:hidden">設定</span>
+          <span class="sm:hidden">圖示/備份</span>
         </button>
 
-        <!-- 桌機新增按鈕 -->
-        <button onclick="openItemModal()" class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold shadow-lg shadow-indigo-600/25 transition">
+        <button type="button" onclick="openItemModal()" class="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-semibold shadow-lg shadow-indigo-600/25 transition">
           <i data-lucide="plus" class="w-4 h-4"></i>
           <span>新增備品</span>
         </button>
@@ -97,11 +119,12 @@
     </div>
   </header>
 
-  <main class="max-w-4xl mx-auto px-4 pt-5 space-y-5">
+  <!-- 主內容區 -->
+  <main class="max-w-5xl mx-auto px-3.5 sm:px-6 pt-5 space-y-5">
 
-    <!-- 儀表板統計卡片 -->
-    <section class="grid grid-cols-3 gap-2.5 sm:gap-3.5">
-      <button onclick="setStockFilter('all')" id="stat-all" class="stat-card text-left p-3.5 rounded-2xl bg-zinc-900/90 border border-indigo-500/50 ring-1 ring-indigo-500/30 transition active:scale-[0.98]">
+    <!-- 1. 三格統計儀表板 -->
+    <section class="grid grid-cols-3 gap-2.5 sm:gap-4">
+      <button type="button" onclick="setStockFilter('all')" id="stat-all" class="stat-card text-left p-3.5 sm:p-4 rounded-2xl bg-zinc-900/90 border border-indigo-500/60 ring-1 ring-indigo-500/30 transition active:scale-[0.98]">
         <div class="flex items-center justify-between text-zinc-400 text-xs mb-1">
           <span>全部品項</span>
           <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-400"></i>
@@ -109,7 +132,7 @@
         <div class="text-xl sm:text-2xl font-bold text-zinc-100" id="count-total">0</div>
       </button>
 
-      <button onclick="setStockFilter('low')" id="stat-low" class="stat-card text-left p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 transition active:scale-[0.98]">
+      <button type="button" onclick="setStockFilter('low')" id="stat-low" class="stat-card text-left p-3.5 sm:p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/90 hover:border-zinc-700 transition active:scale-[0.98]">
         <div class="flex items-center justify-between text-zinc-400 text-xs mb-1">
           <span>低庫存</span>
           <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -117,7 +140,7 @@
         <div class="text-xl sm:text-2xl font-bold text-amber-400" id="count-low">0</div>
       </button>
 
-      <button onclick="setStockFilter('out')" id="stat-out" class="stat-card text-left p-3.5 rounded-2xl bg-zinc-900/60 border border-zinc-800/80 hover:border-zinc-700 transition active:scale-[0.98]">
+      <button type="button" onclick="setStockFilter('out')" id="stat-out" class="stat-card text-left p-3.5 sm:p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800/90 hover:border-zinc-700 transition active:scale-[0.98]">
         <div class="flex items-center justify-between text-zinc-400 text-xs mb-1">
           <span>已缺貨</span>
           <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-400"></i>
@@ -126,68 +149,70 @@
       </button>
     </section>
 
-    <!-- 搜尋與位置篩選 -->
+    <!-- 2. 搜尋、位置篩選與分類膠囊 -->
     <section class="space-y-3">
       <div class="flex flex-col sm:flex-row gap-2.5">
         <div class="relative flex-1">
           <i data-lucide="search" class="w-4 h-4 text-zinc-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
           <input type="text" id="search-input" oninput="renderInventory()" placeholder="搜尋備品名稱、存放位置或備註..." class="w-full pl-10 pr-9 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition" />
-          <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+          <button type="button" id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300" aria-label="清除搜尋">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
 
         <div class="flex gap-2">
-          <div class="relative flex-1 sm:w-52">
+          <div class="relative flex-1 sm:w-56">
             <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-            <select id="location-filter" onchange="renderInventory()" class="w-full pl-9 pr-8 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-200 focus:outline-none focus:border-indigo-500 appearance-none transition">
+            <select id="location-filter" onchange="renderInventory()" class="w-full pl-9 pr-8 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-200 focus:outline-none focus:border-emerald-500 appearance-none transition">
               <option value="ALL">所有存放位置</option>
             </select>
             <i data-lucide="chevron-down" class="w-4 h-4 text-zinc-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
           </div>
-          <button onclick="openLocationModal()" class="px-3 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-emerald-400 flex items-center justify-center shrink-0 transition" title="新增或編輯存放位置">
+
+          <button type="button" onclick="openLocationModal(false)" class="px-3 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-emerald-400 flex items-center gap-1.5 text-xs font-medium shrink-0 transition" title="管理存放位置">
             <i data-lucide="folder-cog" class="w-4 h-4"></i>
+            <span class="sm:hidden">管理位置</span>
           </button>
         </div>
       </div>
 
-      <!-- 分類膠囊列 -->
+      <!-- 7 大分類膠囊 -->
       <div id="category-pills" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
         <!-- 由 JS 動態產生 -->
       </div>
     </section>
 
-    <!-- 庫存清單網格 -->
-    <section id="inventory-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+    <!-- 3. 備品卡片網格 -->
+    <section id="inventory-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
       <!-- 由 JS 動態產生 -->
     </section>
 
-    <!-- 空狀態提示 -->
-    <section id="empty-state" class="hidden py-16 text-center space-y-3 bg-zinc-900/40 rounded-3xl border border-dashed border-zinc-800">
+    <!-- 空狀態畫面 -->
+    <section id="empty-state" class="hidden py-16 px-4 text-center space-y-3 bg-zinc-900/40 rounded-3xl border border-dashed border-zinc-800">
       <div class="w-12 h-12 rounded-2xl bg-zinc-800/80 text-zinc-400 flex items-center justify-center mx-auto">
         <i data-lucide="package-open" class="w-6 h-6"></i>
       </div>
       <div>
         <h3 class="text-base font-semibold text-zinc-200">找不到符合的備品</h3>
-        <p class="text-xs text-zinc-500 mt-1">試試調整篩選條件，或點擊下方按鈕新增第一筆備品</p>
+        <p class="text-xs text-zinc-500 mt-1">試試調整篩選條件，或點擊新增按鈕建立備品</p>
       </div>
-      <button onclick="resetFilters()" class="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 transition">
+      <button type="button" onclick="resetFilters()" class="px-4 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-200 transition">
         清除所有篩選
       </button>
     </section>
   </main>
 
   <!-- 手機版懸浮新增按鈕 -->
-  <button onclick="openItemModal()" class="sm:hidden fixed right-5 z-30 w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-90 text-white shadow-xl shadow-indigo-600/35 flex items-center justify-center transition" style="bottom: calc(1.25rem + var(--sab));" aria-label="新增備品">
+  <button type="button" onclick="openItemModal()" class="sm:hidden fixed right-5 z-30 w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 active:scale-90 text-white shadow-xl shadow-indigo-600/35 flex items-center justify-center transition" style="bottom: calc(1.25rem + var(--sab));" aria-label="新增備品">
     <i data-lucide="plus" class="w-7 h-7"></i>
   </button>
 
-  <!-- ==================== 1. 新增 / 編輯備品 Modal ==================== -->
+  <!-- ==================== Modal 1: 新增 / 編輯備品 ==================== -->
   <div id="item-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-0 sm:p-4">
     <div class="animate-modal w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 max-h-[92vh] overflow-y-auto" style="padding-bottom: calc(1.5rem + var(--sab));">
       <div class="flex items-center justify-between">
         <h2 id="item-modal-title" class="text-lg font-bold text-zinc-100">新增備品</h2>
-        <button onclick="closeItemModal()" class="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-zinc-200 flex items-center justify-center">
+        <button type="button" onclick="closeItemModal()" class="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-zinc-200 flex items-center justify-center">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -220,7 +245,7 @@
           </div>
         </div>
 
-        <!-- 存放位置選擇與快速新增 -->
+        <!-- 存放位置下拉選單 + 管理/新增位置快捷 -->
         <div>
           <div class="flex items-center justify-between mb-1.5">
             <label class="block text-xs font-medium text-zinc-400">存放位置 <span class="text-rose-400">*</span></label>
@@ -231,7 +256,7 @@
           </div>
           <div class="relative">
             <select id="item-location-select" required class="w-full px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 focus:outline-none focus:border-emerald-500 appearance-none">
-              <!-- 由 JS 動態填入已建立的存放位置 -->
+              <!-- 由 JS 動態填入 -->
             </select>
             <i data-lucide="chevron-down" class="w-4 h-4 text-zinc-500 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
           </div>
@@ -266,34 +291,34 @@
     </div>
   </div>
 
-  <!-- ==================== 2. 存放位置管理 Modal（新增 / 編輯 / 刪除） ==================== -->
+  <!-- ==================== Modal 2: 存放位置管理（新增 / 編輯 / 刪除） ==================== -->
   <div id="location-modal" class="fixed inset-0 z-[60] hidden items-end sm:items-center justify-center bg-black/80 backdrop-blur-sm p-0 sm:p-4">
     <div class="animate-modal w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-4 max-h-[90vh] overflow-y-auto" style="padding-bottom: calc(1.5rem + var(--sab));">
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center shrink-0">
             <i data-lucide="map-pin" class="w-4 h-4"></i>
           </div>
           <div>
             <h2 class="text-base font-bold text-zinc-100">存放位置管理</h2>
-            <p class="text-[11px] text-zinc-400">可新增、修改名稱或刪除存放位置</p>
+            <p class="text-[11px] text-zinc-400">新增、重新命名或刪除居家存放位置</p>
           </div>
         </div>
-        <button onclick="closeLocationModal()" class="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-zinc-200 flex items-center justify-center">
+        <button type="button" onclick="closeLocationModal()" class="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-zinc-200 flex items-center justify-center">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <!-- 新增位置表單 -->
+      <!-- 新增存放位置表單 -->
       <form onsubmit="addNewLocation(event)" class="flex gap-2">
-        <input type="text" id="new-location-input" placeholder="輸入新位置，如：2F浴室鏡櫃..." class="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500" />
+        <input type="text" id="new-location-input" placeholder="輸入新位置，例如：2F浴室鏡櫃..." class="flex-1 px-3.5 py-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-emerald-500" />
         <button type="submit" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-semibold flex items-center gap-1 shrink-0 transition">
           <i data-lucide="plus" class="w-4 h-4"></i>
           <span>新增</span>
         </button>
       </form>
 
-      <!-- 現有位置清單 -->
+      <!-- 現有存放位置清單 -->
       <div class="space-y-2">
         <div class="flex items-center justify-between text-xs text-zinc-400 px-1">
           <span>已建立的存放位置</span>
@@ -305,19 +330,19 @@
       </div>
 
       <div class="pt-1">
-        <button onclick="closeLocationModal()" class="w-full py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition">
-          完成返回
+        <button type="button" onclick="closeLocationModal()" class="w-full py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold transition">
+          完成並返回
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 3. iOS 主畫面圖示自訂 & 資料備份 Modal ==================== -->
+  <!-- ==================== Modal 3: iOS 主畫面圖示自訂 & 資料備份 ==================== -->
   <div id="settings-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-0 sm:p-4">
     <div class="animate-modal w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 space-y-5 max-h-[92vh] overflow-y-auto" style="padding-bottom: calc(1.5rem + var(--sab));">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-bold text-zinc-100">iOS 主畫面圖示 & 資料備份</h2>
-        <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-zinc-200 flex items-center justify-center">
+        <button type="button" onclick="closeSettingsModal()" class="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 hover:text-zinc-200 flex items-center justify-center">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -338,7 +363,7 @@
             <span id="ios-icon-preview-label" class="text-[11px] text-zinc-200 font-medium max-w-[72px] truncate">備品庫存</span>
           </div>
           <div class="text-xs text-zinc-400 space-y-1.5 leading-relaxed">
-            <p class="text-zinc-200 font-medium">設定步驟（請用 Safari 開啟）：</p>
+            <p class="text-zinc-200 font-medium">iPhone Safari 加入主畫面步驟：</p>
             <p>1. 自訂下方名稱與圖示並按儲存</p>
             <p>2. 點擊 Safari 底部 <span class="text-indigo-400 font-semibold">分享 ⬆️</span> → <span class="text-indigo-400 font-semibold">加入主畫面</span></p>
           </div>
@@ -350,7 +375,7 @@
           <input type="text" id="custom-app-name" maxlength="12" oninput="previewIconSettings()" placeholder="例如：備品庫存、居家管家" class="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-100 text-sm focus:outline-none focus:border-indigo-500" />
         </div>
 
-        <!-- 模式切換：內建圖示 vs 上傳照片 -->
+        <!-- 模式切換：Emoji/文字圖示 vs 上傳相簿圖片 -->
         <div class="grid grid-cols-2 gap-2 p-1 rounded-xl bg-zinc-900 border border-zinc-800">
           <button type="button" id="mode-emoji-btn" onclick="setIconMode('emoji')" class="py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition">
             Emoji / 文字圖示
@@ -363,7 +388,7 @@
         <!-- Emoji / 文字模式面板 -->
         <div id="emoji-mode-panel" class="space-y-3">
           <div>
-            <label class="block text-xs text-zinc-400 mb-1.5">選擇或輸入圖示符號（支援 Emoji 或 1~2 個中英字）</label>
+            <label class="block text-xs text-zinc-400 mb-1.5">選擇或輸入圖示符號（Emoji 或 1~2 字）</label>
             <div class="flex gap-2">
               <input type="text" id="custom-icon-char" maxlength="2" oninput="previewIconSettings()" value="📦" class="w-16 text-center px-2 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-lg focus:outline-none focus:border-indigo-500" />
               <div class="flex-1 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
@@ -380,7 +405,7 @@
           <div>
             <label class="block text-xs text-zinc-400 mb-1.5">背景色系</label>
             <div class="grid grid-cols-6 gap-2" id="gradient-picker">
-              <!-- 由 JS 產生漸層色票 -->
+              <!-- 由 JS 產生 -->
             </div>
           </div>
         </div>
@@ -407,7 +432,7 @@
           <span class="text-[11px] text-zinc-500">建議定期匯出保存</span>
         </div>
         <div class="grid grid-cols-2 gap-2.5">
-          <button onclick="exportData()" class="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-200 transition">
+          <button type="button" onclick="exportData()" class="flex items-center justify-center gap-2 p-3 rounded-xl bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 text-xs font-medium text-zinc-200 transition">
             <i data-lucide="download" class="w-4 h-4 text-emerald-400"></i>
             <span>匯出備份檔</span>
           </button>
@@ -421,7 +446,7 @@
 
         <div class="pt-1 border-t border-zinc-800/80 flex justify-between items-center">
           <span class="text-[11px] text-zinc-500">需要測試範例？</span>
-          <button onclick="resetToSampleData()" class="text-[11px] text-amber-400 hover:text-amber-300 underline">
+          <button type="button" onclick="resetToSampleData()" class="text-[11px] text-amber-400 hover:text-amber-300 underline">
             重置為預設範例資料
           </button>
         </div>
@@ -429,8 +454,26 @@
     </div>
   </div>
 
+  <!-- 自訂確認對話框（避免原生 confirm） -->
+  <div id="confirm-modal" class="fixed inset-0 z-[70] hidden items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="animate-modal w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-5 space-y-4 shadow-2xl">
+      <div>
+        <h3 id="confirm-title" class="text-base font-bold text-zinc-100">確認操作</h3>
+        <p id="confirm-message" class="text-xs text-zinc-400 mt-1.5 leading-relaxed"></p>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button type="button" onclick="closeConfirmModal()" class="px-3.5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-xs font-medium text-zinc-300 transition">
+          取消
+        </button>
+        <button type="button" id="confirm-ok-btn" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-semibold text-white transition">
+          確定執行
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast 通知 -->
-  <div id="toast" class="fixed left-1/2 -translate-x-1/2 z-[70] px-4 py-2.5 rounded-full bg-zinc-800/95 text-zinc-100 text-xs font-medium shadow-xl border border-zinc-700/80 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-200" style="bottom: calc(5.5rem + var(--sab));">
+  <div id="toast" class="fixed left-1/2 -translate-x-1/2 z-[80] px-4 py-2.5 rounded-full bg-zinc-800/95 text-zinc-100 text-xs font-medium shadow-xl border border-zinc-700/80 backdrop-blur-md opacity-0 pointer-events-none transition-all duration-200 whitespace-nowrap" style="bottom: calc(5.5rem + var(--sab));">
     已更新
   </div>
 
@@ -464,17 +507,16 @@
       '1F廚房水槽下',
       '2F浴室鏡櫃',
       '1F電視櫃抽屜',
-      '1F玄關鞋櫃上層',
-      '1F客廳電視旁櫃子'
+      '1F玄關鞋櫃上層'
     ];
 
     const SAMPLE_ITEMS = [
       { id: '1', name: '抽取式衛生紙 (串)', category: '日用衛生', location: '2F儲藏室層架', qty: 3, minQty: 2, unit: '串', note: '1串12包', updatedAt: Date.now() },
-      { id: '2', name: '洗衣精補充包', category: '清潔洗劑', location: '1F廚房水槽下', qty: 1, minQty: 2, unit: '包', note: '低庫存提醒測試', updatedAt: Date.now() },
-      { id: '3', name: '3號鹼性電池 (AA)', category: '3C電池', location: '1F電視櫃抽屜', qty: 8, minQty: 4, unit: '顆', note: '遙控器與滑鼠用', updatedAt: Date.now() },
-      { id: '4', name: '中號加厚垃圾袋', category: '廚房耗材', location: '1F廚房水槽下', qty: 0, minQty: 2, unit: '捲', note: '已缺貨，下次採買補貨', updatedAt: Date.now() },
-      { id: '5', name: '牙膏', category: '日用衛生', location: '2F浴室鏡櫃', qty: 2, minQty: 1, unit: '條', note: '', updatedAt: Date.now() },
-      { id: '6', name: '75% 酒精噴霧補充瓶', category: '常備醫藥', location: '1F玄關鞋櫃上層', qty: 2, minQty: 1, unit: '瓶', note: '', updatedAt: Date.now() }
+      { id: '2', name: '洗衣精補充包', category: '清潔洗劑', location: '1F廚房水槽下', qty: 1, minQty: 2, unit: '包', note: '低於安全量提醒', updatedAt: Date.now() - 1000 },
+      { id: '3', name: '3號鹼性電池 (AA)', category: '3C電池', location: '1F電視櫃抽屜', qty: 8, minQty: 4, unit: '顆', note: '遙控器與滑鼠用', updatedAt: Date.now() - 2000 },
+      { id: '4', name: '中號加厚垃圾袋', category: '廚房耗材', location: '1F廚房水槽下', qty: 0, minQty: 2, unit: '捲', note: '已缺貨，需補貨', updatedAt: Date.now() - 3000 },
+      { id: '5', name: '薄荷牙膏', category: '日用衛生', location: '2F浴室鏡櫃', qty: 2, minQty: 1, unit: '條', note: '', updatedAt: Date.now() - 4000 },
+      { id: '6', name: '75% 酒精噴霧補充瓶', category: '常備醫藥', location: '1F玄關鞋櫃上層', qty: 2, minQty: 1, unit: '瓶', note: '', updatedAt: Date.now() - 5000 }
     ];
 
     let inventory = [];
@@ -483,6 +525,7 @@
     let currentStockFilter = 'all';
     let editingLocationIndex = -1;
     let returnToItemModalAfterLocation = false;
+    let pendingConfirmAction = null;
 
     let iconConfig = {
       appName: '備品庫存',
@@ -492,31 +535,33 @@
       customImageDataUrl: ''
     };
 
-    // 初始化
+    // 初始化應用程式
     function init() {
-      loadIconSettings();
-      applyIconToDocument();
-      loadLocations();
-      loadInventory();
-      syncAllLocationLists();
-      renderCategories();
-      renderGradientPicker();
-      renderInventory();
-      lucide.createIcons();
+      try {
+        loadIconSettings();
+        applyIconToDocument();
+        loadLocations();
+        loadInventory();
+        syncAllLocationLists();
+        renderCategories();
+        renderGradientPicker();
+        renderInventory();
+        lucide.createIcons();
+      } catch (err) {
+        console.error('初始化失敗:', err);
+        showToast('初始化時發生錯誤');
+      }
     }
 
     // ==================== 存放位置管理 ====================
     function loadLocations() {
-      const saved = localStorage.getItem(LOCATIONS_KEY);
-      if (saved) {
-        try {
-          locations = JSON.parse(saved);
-        } catch (e) {
-          locations = [...DEFAULT_LOCATIONS];
-        }
-      } else {
+      try {
+        const saved = localStorage.getItem(LOCATIONS_KEY);
+        locations = saved ? JSON.parse(saved) : [...DEFAULT_LOCATIONS];
+        if (!Array.isArray(locations)) locations = [...DEFAULT_LOCATIONS];
+        if (!saved) saveLocationsToStorage();
+      } catch (e) {
         locations = [...DEFAULT_LOCATIONS];
-        saveLocationsToStorage();
       }
     }
 
@@ -524,7 +569,6 @@
       localStorage.setItem(LOCATIONS_KEY, JSON.stringify(locations));
     }
 
-    // 同步首頁篩選下拉、新增備品表單下拉，並將庫存中既有但未在清單的位置補入
     function syncAllLocationLists() {
       let addedFromItems = false;
       inventory.forEach(item => {
@@ -535,22 +579,16 @@
       });
       if (addedFromItems) saveLocationsToStorage();
 
-      // 1. 更新首頁篩選下拉選單
       const filterSelect = document.getElementById('location-filter');
       const prevFilter = filterSelect.value;
       filterSelect.innerHTML = `<option value="ALL">所有存放位置 (${locations.length})</option>` +
         locations.map(loc => `<option value="${escapeHtml(loc)}">${escapeHtml(loc)}</option>`).join('');
-      if (locations.includes(prevFilter)) {
-        filterSelect.value = prevFilter;
-      } else {
-        filterSelect.value = 'ALL';
-      }
+      filterSelect.value = locations.includes(prevFilter) ? prevFilter : 'ALL';
 
-      // 2. 更新新增/編輯備品表單的存放位置下拉選單
       const itemSelect = document.getElementById('item-location-select');
       const prevItemLoc = itemSelect.value;
       if (locations.length === 0) {
-        itemSelect.innerHTML = `<option value="">請先新增存放位置</option>`;
+        itemSelect.innerHTML = `<option value="未指定位置">未指定位置</option>`;
       } else {
         itemSelect.innerHTML = locations.map(loc => `<option value="${escapeHtml(loc)}">${escapeHtml(loc)}</option>`).join('');
         if (locations.includes(prevItemLoc)) {
@@ -560,7 +598,7 @@
     }
 
     function openLocationModal(fromItemModal = false) {
-      returnToItemModalAfterLocation = fromItemModal;
+      returnToItemModalAfterLocation = Boolean(fromItemModal);
       editingLocationIndex = -1;
       document.getElementById('new-location-input').value = '';
       renderLocationManageList();
@@ -587,7 +625,7 @@
       if (locations.length === 0) {
         listEl.innerHTML = `
           <div class="py-8 text-center text-xs text-zinc-500 bg-zinc-950/60 rounded-2xl border border-dashed border-zinc-800">
-            尚未建立任何存放位置，請在上方輸入新增
+            尚未建立存放位置，請在上方輸入新增
           </div>
         `;
         return;
@@ -637,8 +675,10 @@
       e.preventDefault();
       const input = document.getElementById('new-location-input');
       const newLoc = input.value.trim();
-      if (!newLoc) return;
-
+      if (!newLoc) {
+        showToast('請輸入存放位置名稱');
+        return;
+      }
       if (locations.includes(newLoc)) {
         showToast('此存放位置已存在');
         return;
@@ -648,7 +688,6 @@
       saveLocationsToStorage();
       syncAllLocationLists();
 
-      // 若是從新增備品視窗點進來，自動幫使用者選取剛新增的位置
       if (returnToItemModalAfterLocation) {
         document.getElementById('item-location-select').value = newLoc;
       }
@@ -667,7 +706,7 @@
           inp.focus();
           inp.select();
         }
-      }, 30);
+      }, 25);
     }
 
     function cancelEditLocation() {
@@ -682,22 +721,19 @@
       const oldName = locations[idx];
 
       if (!updatedName) {
-        showToast('位置名稱不能為空');
+        showToast('位置名稱不能為空白');
         return;
       }
-
       if (updatedName === oldName) {
         editingLocationIndex = -1;
         renderLocationManageList();
         return;
       }
-
       if (locations.includes(updatedName)) {
         showToast('已有相同的存放位置名稱');
         return;
       }
 
-      // 更新位置陣列並同步更新所有使用該位置的備品
       locations[idx] = updatedName;
       let updatedCount = 0;
       inventory.forEach(item => {
@@ -720,44 +756,42 @@
       const targetLoc = locations[idx];
       const relatedItems = inventory.filter(i => i.location === targetLoc);
 
-      if (relatedItems.length > 0) {
-        const ok = confirm(`「${targetLoc}」目前還有 ${relatedItems.length} 項備品。\n\n確定要刪除此位置嗎？（這些備品的存放位置將會標記為「未指定位置」）`);
-        if (!ok) return;
+      const message = relatedItems.length > 0
+        ? `「${targetLoc}」目前還有 ${relatedItems.length} 項備品。確定要刪除嗎？這些備品將自動移至「未指定位置」。`
+        : `確定要刪除存放位置「${targetLoc}」嗎？`;
 
-        if (!locations.includes('未指定位置') && targetLoc !== '未指定位置') {
-          locations.push('未指定位置');
-        }
-        inventory.forEach(item => {
-          if (item.location === targetLoc) {
-            item.location = '未指定位置';
+      openConfirmModal('刪除存放位置', message, () => {
+        if (relatedItems.length > 0) {
+          if (!locations.includes('未指定位置') && targetLoc !== '未指定位置') {
+            locations.push('未指定位置');
           }
-        });
-        saveInventoryToStorage();
-      } else {
-        if (!confirm(`確定要刪除存放位置「${targetLoc}」嗎？`)) return;
-      }
+          inventory.forEach(item => {
+            if (item.location === targetLoc) {
+              item.location = '未指定位置';
+            }
+          });
+          saveInventoryToStorage();
+        }
 
-      locations = locations.filter(l => l !== targetLoc);
-      saveLocationsToStorage();
-      syncAllLocationLists();
-      editingLocationIndex = -1;
-      renderLocationManageList();
-      renderInventory();
-      showToast(`已刪除位置：${targetLoc}`);
+        locations = locations.filter(l => l !== targetLoc);
+        saveLocationsToStorage();
+        syncAllLocationLists();
+        editingLocationIndex = -1;
+        renderLocationManageList();
+        renderInventory();
+        showToast(`已刪除位置：${targetLoc}`);
+      });
     }
 
     // ==================== 庫存資料存取與渲染 ====================
     function loadInventory() {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        try {
-          inventory = JSON.parse(saved);
-        } catch (e) {
-          inventory = [...SAMPLE_ITEMS];
-        }
-      } else {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        inventory = saved ? JSON.parse(saved) : [...SAMPLE_ITEMS];
+        if (!Array.isArray(inventory)) inventory = [...SAMPLE_ITEMS];
+        if (!saved) saveInventoryToStorage();
+      } catch (e) {
         inventory = [...SAMPLE_ITEMS];
-        saveInventoryToStorage();
       }
     }
 
@@ -771,7 +805,7 @@
         const active = currentCategory === cat;
         const icon = CATEGORY_ICONS[cat] ? `${CATEGORY_ICONS[cat]} ` : '';
         return `
-          <button onclick="setCategory('${cat}')" class="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
+          <button type="button" onclick="setCategory('${cat}')" class="px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition ${
             active
               ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25'
               : 'bg-zinc-900 text-zinc-400 hover:text-zinc-200 border border-zinc-800'
@@ -791,12 +825,12 @@
     function setStockFilter(filter) {
       currentStockFilter = filter;
       document.querySelectorAll('.stat-card').forEach(el => {
-        el.classList.remove('border-indigo-500/50', 'ring-1', 'ring-indigo-500/30', 'bg-zinc-900/90');
-        el.classList.add('border-zinc-800/80', 'bg-zinc-900/60');
+        el.classList.remove('border-indigo-500/60', 'ring-1', 'ring-indigo-500/30', 'bg-zinc-900/90');
+        el.classList.add('border-zinc-800/90', 'bg-zinc-900/60');
       });
       const activeCard = document.getElementById(`stat-${filter}`);
-      activeCard.classList.remove('border-zinc-800/80', 'bg-zinc-900/60');
-      activeCard.classList.add('border-indigo-500/50', 'ring-1', 'ring-indigo-500/30', 'bg-zinc-900/90');
+      activeCard.classList.remove('border-zinc-800/90', 'bg-zinc-900/60');
+      activeCard.classList.add('border-indigo-500/60', 'ring-1', 'ring-indigo-500/30', 'bg-zinc-900/90');
       renderInventory();
     }
 
@@ -831,7 +865,7 @@
       const locVal = document.getElementById('location-filter').value;
       document.getElementById('clear-search-btn').classList.toggle('hidden', !searchVal);
 
-      let filtered = inventory.filter(item => {
+      const filtered = inventory.filter(item => {
         const matchCat = currentCategory === '全部' || item.category === currentCategory;
         const matchLoc = locVal === 'ALL' || item.location === locVal;
         const matchSearch = !searchVal ||
@@ -846,6 +880,7 @@
         return matchCat && matchLoc && matchSearch && matchStock;
       });
 
+      // 已缺貨 -> 庫存偏低 -> 正常庫存 依序置頂
       filtered.sort((a, b) => {
         const getPriority = (item) => {
           if (item.qty === 0) return 0;
@@ -855,7 +890,7 @@
         const pA = getPriority(a);
         const pB = getPriority(b);
         if (pA !== pB) return pA - pB;
-        return b.updatedAt - a.updatedAt;
+        return (b.updatedAt || 0) - (a.updatedAt || 0);
       });
 
       const grid = document.getElementById('inventory-grid');
@@ -901,7 +936,7 @@
                 <h3 class="text-base font-bold text-zinc-100 leading-snug break-words">${escapeHtml(item.name)}</h3>
               </div>
 
-              <button onclick="openItemModal('${item.id}')" class="p-2 -mr-1.5 -mt-1 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition shrink-0" title="編輯備品">
+              <button type="button" onclick="openItemModal('${item.id}')" class="p-2 -mr-1.5 -mt-1 rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition shrink-0" title="編輯備品">
                 <i data-lucide="pencil" class="w-4 h-4"></i>
               </button>
             </div>
@@ -915,15 +950,15 @@
                 ${item.note ? `<p class="text-[11px] text-zinc-500 truncate pl-0.5">${escapeHtml(item.note)}</p>` : ''}
               </div>
 
-              <div class="flex items-center gap-1.5 bg-zinc-950 p-1 rounded-xl border border-zinc-800 shrink-0">
-                <button onclick="adjustQty('${item.id}', -1)" class="w-9 h-9 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-90 text-zinc-300 flex items-center justify-center transition" aria-label="減少數量">
+              <div class="flex items-center gap-1 bg-zinc-950 p-1 rounded-xl border border-zinc-800 shrink-0">
+                <button type="button" onclick="adjustQty('${item.id}', -1)" class="w-9 h-9 rounded-lg bg-zinc-900 hover:bg-zinc-800 active:scale-90 text-zinc-300 flex items-center justify-center transition" aria-label="減少數量">
                   <i data-lucide="minus" class="w-4 h-4"></i>
                 </button>
-                <div class="min-w-[3.2rem] text-center px-1">
+                <div class="min-w-[3.1rem] text-center px-1">
                   <span class="text-base font-bold ${qtyColor}">${item.qty}</span>
                   <span class="text-[11px] text-zinc-500 ml-0.5">${escapeHtml(item.unit)}</span>
                 </div>
-                <button onclick="adjustQty('${item.id}', 1)" class="w-9 h-9 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/35 active:scale-90 text-indigo-400 flex items-center justify-center transition" aria-label="增加數量">
+                <button type="button" onclick="adjustQty('${item.id}', 1)" class="w-9 h-9 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/35 active:scale-90 text-indigo-400 flex items-center justify-center transition" aria-label="增加數量">
                   <i data-lucide="plus" class="w-4 h-4"></i>
                 </button>
               </div>
@@ -988,6 +1023,7 @@
 
       modal.classList.remove('hidden');
       modal.classList.add('flex');
+      lucide.createIcons();
     }
 
     function closeItemModal() {
@@ -1012,6 +1048,8 @@
         updatedAt: Date.now()
       };
 
+      if (!itemData.name) return;
+
       if (id) {
         const idx = inventory.findIndex(i => i.id === id);
         if (idx !== -1) inventory[idx] = itemData;
@@ -1030,23 +1068,21 @@
     function deleteCurrentItem() {
       const id = document.getElementById('item-id').value;
       if (!id) return;
-      if (!confirm('確定要刪除這筆備品嗎？')) return;
-
-      inventory = inventory.filter(i => i.id !== id);
-      saveInventoryToStorage();
-      renderInventory();
-      closeItemModal();
-      showToast('已刪除備品');
+      openConfirmModal('刪除備品', '確定要刪除這筆備品嗎？刪除後無法復原。', () => {
+        inventory = inventory.filter(i => i.id !== id);
+        saveInventoryToStorage();
+        renderInventory();
+        closeItemModal();
+        showToast('已刪除備品');
+      });
     }
 
     // ==================== iOS 主畫面圖示自訂引擎 ====================
     function loadIconSettings() {
-      const saved = localStorage.getItem(ICON_SETTINGS_KEY);
-      if (saved) {
-        try {
-          iconConfig = { ...iconConfig, ...JSON.parse(saved) };
-        } catch (e) {}
-      }
+      try {
+        const saved = localStorage.getItem(ICON_SETTINGS_KEY);
+        if (saved) iconConfig = { ...iconConfig, ...JSON.parse(saved) };
+      } catch (e) {}
     }
 
     function generateIconDataUrl(cfg) {
@@ -1066,7 +1102,7 @@
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, size, size);
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
       ctx.beginPath();
       ctx.arc(size * 0.85, size * 0.15, size * 0.45, 0, Math.PI * 2);
       ctx.fill();
@@ -1075,8 +1111,8 @@
       ctx.fillStyle = '#ffffff';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      const fontSize = char.length > 1 ? 96 : 124;
-      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Noto Sans TC", sans-serif`;
+      const fontSize = Array.from(char).length > 1 ? 96 : 124;
+      ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Apple Color Emoji", "Noto Sans TC", sans-serif`;
       ctx.fillText(char, size / 2, size / 2 + 6);
 
       return canvas.toDataURL('image/png');
@@ -1095,7 +1131,7 @@
       const headerBox = document.getElementById('header-icon-preview');
       if (iconConfig.mode === 'image' && iconConfig.customImageDataUrl) {
         headerBox.style.background = 'none';
-        headerBox.innerHTML = `<img src="${iconConfig.customImageDataUrl}" class="w-full h-full rounded-xl object-cover" />`;
+        headerBox.innerHTML = `<img src="${iconConfig.customImageDataUrl}" alt="App Icon" class="w-full h-full rounded-xl object-cover" />`;
       } else {
         const gradObj = GRADIENTS.find(g => g.id === iconConfig.gradientId) || GRADIENTS[0];
         headerBox.style.background = `linear-gradient(135deg, ${gradObj.c1}, ${gradObj.c2})`;
@@ -1123,6 +1159,7 @@
       const modal = document.getElementById('settings-modal');
       modal.classList.remove('hidden');
       modal.classList.add('flex');
+      lucide.createIcons();
     }
 
     function closeSettingsModal() {
@@ -1182,14 +1219,15 @@
           const sy = (img.height - minSide) / 2;
           ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
 
-          iconConfig.customImageDataUrl = canvas.toDataURL('image/png', 0.9);
+          iconConfig.customImageDataUrl = canvas.toDataURL('image/png', 0.85);
           iconConfig.mode = 'image';
           previewIconSettings();
-          showToast('圖片已裁切載入，請點擊「套用並儲存」');
+          showToast('圖片已裁切載入，請點「套用並儲存」');
         };
         img.src = e.target.result;
       };
       reader.readAsDataURL(file);
+      event.target.value = '';
     }
 
     function previewIconSettings() {
@@ -1210,11 +1248,11 @@
         applyIconToDocument();
         showToast('已儲存！請點 Safari 分享 → 加入主畫面');
       } catch (e) {
-        showToast('儲存失敗：圖片檔案過大，請換一張或改用 Emoji');
+        showToast('儲存失敗：圖片過大，請換一張或改用 Emoji');
       }
     }
 
-    // ==================== 資料備份與還原（含備品與位置） ====================
+    // ==================== 資料備份與還原 ====================
     function exportData() {
       const backupPayload = {
         version: 2,
@@ -1229,7 +1267,9 @@
       const dateStr = new Date().toISOString().slice(0, 10);
       a.href = url;
       a.download = `備品庫存與位置備份_${dateStr}.json`;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
       showToast('已匯出 JSON 備份檔');
     }
@@ -1258,7 +1298,7 @@
           closeSettingsModal();
           showToast(`成功匯入 ${inventory.length} 筆備品資料`);
         } catch (err) {
-          alert('匯入失敗：請確認選擇的是正確的 JSON 備份檔案。');
+          showToast('匯入失敗：請確認為有效的 JSON 備份檔');
         }
       };
       reader.readAsText(file);
@@ -1266,15 +1306,44 @@
     }
 
     function resetToSampleData() {
-      if (!confirm('這將會覆蓋目前的庫存與位置清單並恢復為預設範例，確定嗎？')) return;
-      locations = [...DEFAULT_LOCATIONS];
-      inventory = [...SAMPLE_ITEMS];
-      saveLocationsToStorage();
-      saveInventoryToStorage();
-      syncAllLocationLists();
-      renderInventory();
-      closeSettingsModal();
-      showToast('已重置為預設範例資料');
+      openConfirmModal('重置預設範例', '這將會覆蓋目前的庫存與位置清單並恢復為預設範例，確定要繼續嗎？', () => {
+        locations = [...DEFAULT_LOCATIONS];
+        inventory = SAMPLE_ITEMS.map((item, idx) => ({
+          ...item,
+          id: `${Date.now()}-${idx}`,
+          updatedAt: Date.now() - idx * 1000
+        }));
+        saveLocationsToStorage();
+        saveInventoryToStorage();
+        syncAllLocationLists();
+        renderInventory();
+        closeSettingsModal();
+        showToast('已重置為預設範例資料');
+      });
+    }
+
+    // ==================== 自訂確認框 & Toast ====================
+    function openConfirmModal(title, message, onConfirm) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      pendingConfirmAction = onConfirm;
+
+      document.getElementById('confirm-ok-btn').onclick = () => {
+        const action = pendingConfirmAction;
+        closeConfirmModal();
+        if (typeof action === 'function') action();
+      };
+
+      const modal = document.getElementById('confirm-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeConfirmModal() {
+      pendingConfirmAction = null;
+      const modal = document.getElementById('confirm-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
     }
 
     function showToast(msg) {
@@ -1299,7 +1368,7 @@
         .replace(/'/g, '&#039;');
     }
 
-    init();
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>
